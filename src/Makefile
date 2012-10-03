@@ -8,7 +8,8 @@
 PROJNAME:=jgcc
 LIBS:=
 
-DFLAGS:=-Wall -O1 -ggdb3 -funittest -fdoc -fdoc-dir=../doc
+DFLAGS:=-Wall -O1 -ggdb3 -funittest
+DOCFLAGS:=-O0 -fdoc
 LINKFLAGS:=-fwhole-program -fuse-linker-plugin $(LIBS)
 
 OUT_EXE:=$(PROJNAME)
@@ -16,16 +17,22 @@ OUT_EXE:=$(PROJNAME)
 # evaluated when used
 SOURCES=$(wildcard *.d)
 OBJECTS=$(patsubst %.d,%.o,$(SOURCES))
-CLEAN=$(OUT_EXE) $(wildcard *.o)
+DOCS=$(patsubst %.d,../doc/%.html,$(SOURCES))
+CLEAN=$(wildcard jgcc) $(wildcard *.o) $(wildcard ../doc/*.html)
 
 
-.PHONY: all clean
+.PHONY: all doc clean
 
 # default rule
-all: $(PROJNAME)
+all: $(PROJNAME) doc
 
 $(PROJNAME): $(OBJECTS)
 	gdc $(LINKFLAGS) -o $@ $^
+
+doc: $(DOCS)
+
+../doc/%.html: %.d Makefile
+	gdc $(DOCFLAGS) -fdoc-file=$@ -o /dev/null -c $<
 
 %.o: %.d Makefile
 	gdc $(DFLAGS) -c $<
