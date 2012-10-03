@@ -8,7 +8,8 @@ import input;
 
 void main(string[] args)
 {
-	stderr.write("jgcc: c compiler\n(c) 2012 justin gottula\n\n");
+	stderr.write("jgcc: justin gottula's c compiler\n" ~
+		"      (c) 2012 justin gottula\n\n");
 	
 	if (args.length != 2)
 	{
