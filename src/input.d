@@ -8,14 +8,12 @@ import std.stdio;
 
 File getInputFile(string inputPath)
 {
-	if (inputPath.length < 3 || inputPath[$-2..$] != ".c")
-	{
+	if (inputPath.length < 3 || inputPath[$-2..$] != ".c") {
 		stderr.write("[input] expected a file ending in '.c'\n");
 		exit(1);
 	}
 	
-	if (!exists(inputPath))
-	{
+	if (!exists(inputPath)) {
 		stderr.writef("[input] the source file '%s' does not exist\n",
 			inputPath);
 		exit(1);
