@@ -4,6 +4,7 @@ import std.c.stdlib;
 import std.stdio;
 
 import input;
+import lex;
 
 
 void main(string[] args)
@@ -17,4 +18,5 @@ void main(string[] args)
 	}
 	
 	File inputFile = getInputFile(args[1]);
+	LexContext lexCtx = lexFile(inputFile);
 }
