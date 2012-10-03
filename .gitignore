@@ -1,3 +1,4 @@
+doc/*.html
 src/*.gch
 src/*.o
 src/jgcc
