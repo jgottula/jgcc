@@ -6,9 +6,10 @@
 # project makefile
 
 PROJNAME:=jgcc
-
-DFLAGS:=-Wall -Wextra -O1 -ggdb3 -fwhole-program -fuse-linker-plugin -DDEBUG
 LIBS:=
+
+DFLAGS:=-Wall -Wextra -O1 -ggdb3 -funittest -fdoc -fdoc-dir=../doc
+LINKFLAGS:=-fwhole-program -fuse-linker-plugin $(LIBS)
 
 OUT_EXE:=$(PROJNAME)
 
@@ -24,7 +25,7 @@ CLEAN=$(OUT_EXE) $(wildcard *.o)
 all: $(PROJNAME)
 
 $(PROJNAME): $(OBJECTS)
-	gdc $(DFLAGS) -o $@ $^
+	gdc $(LINKFLAGS) -o $@ $^
 
 %.o: %.d Makefile
 	gdc $(DFLAGS) -c $<
