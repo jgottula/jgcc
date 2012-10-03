@@ -8,7 +8,8 @@
 PROJNAME:=jgcc
 LIBS:=
 
-DFLAGS:=-Wall -O1 -ggdb3 -funittest
+# -funittest is exceptionally slow
+DFLAGS:=-Wall -O1 -ggdb3
 DOCFLAGS:=-O0 -fdoc
 LINKFLAGS:=-fwhole-program -fuse-linker-plugin $(LIBS)
 
