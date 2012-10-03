@@ -8,7 +8,7 @@
 PROJNAME:=jgcc
 LIBS:=
 
-DFLAGS:=-Wall -Wextra -O1 -ggdb3 -funittest -fdoc -fdoc-dir=../doc
+DFLAGS:=-Wall -O1 -ggdb3 -funittest -fdoc -fdoc-dir=../doc
 LINKFLAGS:=-fwhole-program -fuse-linker-plugin $(LIBS)
 
 OUT_EXE:=$(PROJNAME)
