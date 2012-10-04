@@ -29,13 +29,15 @@ enum Token : ushort {
  +/
 struct TokenTag {
 	Token token;
+	ulong line;
 	string tag;
 	
 	/++
-	 + Initializes the class with token and no tag.
+	 + Initializes the class with token and line, but no tag.
 	 +/
-	this(Token token) {
+	this(Token token, ulong line) {
 		this.token = token;
+		this.line = line;
 	}
 }
 
@@ -47,6 +49,9 @@ enum LexState : ushort {
 	COMMENT_BLOCK = 1,
 	COMMENT_LINE  = 2,
 	IDENTIFIER    = 3,
+	LITERAL_INT   = 4,
+	LITERAL_CHAR  = 5,
+	LITERAL_STR   = 6,
 }
 
 /++
@@ -55,6 +60,11 @@ enum LexState : ushort {
 struct LexContext {
 	DList!TokenTag tokens;
 	LexState state;
+	ulong line;
+	
+	this(ulong line) {
+		this.line = line;
+	}
 }
 
 /++
@@ -165,22 +175,62 @@ class LexOverrunException : Exception {
  +/
 LexContext doLex(File inputFile) {
 	auto lexFile = new LexFile(inputFile);
-	auto ctx = LexContext();
+	auto ctx = LexContext(1);
 	char[] buffer = new char[1024];
 	uint bufLen = 0;
+	
+	/+
+	 + Checks whether the cursor is at a newline.
+	 +/
+	bool atNewLine() {
+		char c = lexFile.peek();
+		
+		return (c == '\n' || c == '\r');
+	}
+	
+	/++
+	 + Handles weird line endings and adjusts the context for newlines.
+	 +/
+	void handleNewLine() {
+		char c = lexFile.peek();
+		
+		/* deal with \r\n and \n\r line endings */
+		if (lexFile.avail() >= 2) {
+			char next = lexFile.peek(1);
+			
+			if ((c == '\n' && next == '\r') || (c == '\r' && next == '\n')) {
+				lexFile.advance();
+			}
+		}
+		
+		++ctx.line;
+	}
 	
 	/++
 	 + Checks if an identifier has been completed and, if so, adds it as a
 	 + token.
 	 +/
 	void finishIdentifier() {
-		if (lexFile.avail() < 1 || !inPattern(lexFile.peek(1), "A-Za-z0-9_")) {
-			auto token = TokenTag(Token.IDENTIFIER);
+		if (lexFile.avail() < 2 || !inPattern(lexFile.peek(1), "A-Za-z0-9_")) {
+			auto token = TokenTag(Token.IDENTIFIER, ctx.line);
 			token.tag = to!string(buffer[0..bufLen]);
 			ctx.tokens.insertBack(token);
 			
 			bufLen = 0;
 			ctx.state = LexState.DEFAULT;
+		}
+	}
+	
+	/+
+	 + Appends the _escape sequence represented by escape to the buffer.
+	 +/
+	void appendEscapeChar(in char escape) {
+		if (escape == 'n') {
+			buffer[bufLen++] = '\n';
+		} else {
+			stderr.writef("[lex:%d] unknown escape sequence: '\\%c'\n",
+				ctx.line, escape);
+			exit(1);
 		}
 	}
 	
@@ -193,8 +243,10 @@ LexContext doLex(File inputFile) {
 		
 		/* based on the current state, read a token and/or change the state */
 		if (ctx.state == LexState.DEFAULT) {
-			if (c == '/') {
-				if (lexFile.avail() >= 1) {
+			if (atNewLine()) {
+				handleNewLine();
+			} else if (c == '/') {
+				if (lexFile.avail() >= 2) {
 					if (lexFile.peek(1) == '/') {
 						lexFile.advance();
 						ctx.state = LexState.COMMENT_LINE;
@@ -203,6 +255,8 @@ LexContext doLex(File inputFile) {
 						ctx.state = LexState.COMMENT_BLOCK;
 					}
 				}
+			} else if (c == '"') {
+				ctx.state = LexState.LITERAL_STR;
 			} else if (inPattern(c, "A-Za-z_")) {
 				buffer[bufLen++] = c;
 				finishIdentifier();
@@ -215,29 +269,55 @@ LexContext doLex(File inputFile) {
 				writef("%c", c);
 			}
 		} else if (ctx.state == LexState.COMMENT_BLOCK) {
-			if (c == '*') {
-				if (lexFile.avail() >= 1 && lexFile.peek(1) == '/') {
+			if (atNewLine()) {
+				handleNewLine();
+			} else if (c == '*') {
+				if (lexFile.avail() >= 2 && lexFile.peek(1) == '/') {
 					lexFile.advance();
 					ctx.state = LexState.DEFAULT;
 				}
 			}
 		} else if (ctx.state == LexState.COMMENT_LINE) {
-			if (c == '\n' || c == '\r') {
-				/* deal with \r\n and \n\r line endings */
-				if (lexFile.avail() >= 1) {
-					if (c == '\n' && lexFile.peek(1) == '\r') {
-						lexFile.advance();
-					} else if (c == '\r' && lexFile.peek(1) == '\n') {
-						lexFile.advance();
-					}
-				}
-				
+			if (atNewLine()) {
+				handleNewLine();
 				ctx.state = LexState.DEFAULT;
 			}
 		} else if (ctx.state == LexState.IDENTIFIER) {
 			buffer[bufLen++] = c;
 			
 			finishIdentifier();
+		} else if (ctx.state == LexState.LITERAL_STR) {
+			if (c == '\\') {
+				if (lexFile.avail() >= 2) {
+					char next = lexFile.peek(1);
+					
+					if (next == '\n' || next == '\r') {
+						stderr.writef("[lex:%d] escape sequence interrupted " ~
+							"by newline\n", ctx.line);
+						exit(1);
+					} else {
+						appendEscapeChar(next);
+						lexFile.advance();
+					}
+				} else {
+					stderr.writef("[lex:%d] found an incomplete escape " ~
+						"sequence\n", ctx.line);
+					exit(1);
+				}
+			} else if (c == '"') {
+				auto token = TokenTag(Token.LITERAL_STR, ctx.line);
+				token.tag = to!string(buffer[0..bufLen]);
+				ctx.tokens.insertBack(token);
+				
+				bufLen = 0;
+				ctx.state = LexState.DEFAULT;
+			} else if (c == '\n' || c == '\r') {
+				stderr.writef("[lex:%d] encountered a newline within a " ~
+					"string literal\n", ctx.line);
+				exit(1);
+			} else {
+				buffer[bufLen++] = c;
+			}
 		} else {
 			
 		}
@@ -245,16 +325,17 @@ LexContext doLex(File inputFile) {
 		lexFile.advance();
 	}
 	
-	ctx.tokens.insertBack(TokenTag(Token.EOF));
+	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line));
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
-		stderr.write("[lex] encountered EOF while still in a comment block\n");
+		stderr.writef("[lex:%d] encountered EOF while still in a comment " ~
+			"block\n", ctx.line);
 		exit(1);
 	}
 	
 	foreach (t; ctx.tokens) {
-		writef("token: %s [%s]\n", t.token, t.tag);
+		writef("token @%3d:  %s [%s]\n", t.line, t.token, t.tag);
 	}
 	
 	return ctx;
