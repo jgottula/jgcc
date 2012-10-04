@@ -30,8 +30,9 @@ struct TokenTag {
  + Represents the current state of the lexer.
  +/
 enum LexState : ushort {
-	DEFAULT = 0,
-	COMMENT = 1,
+	DEFAULT       = 0,
+	COMMENT_BLOCK = 1,
+	COMMENT_LINE  = 2,
 }
 
 /++
@@ -93,8 +94,9 @@ class LexFile {
 	 + requested
 	 +/
 	char peek(ulong offset = 0) {
-		if (avail() <= offset)
+		if (avail() <= offset) {
 			throw new LexOverrunException();
+		}
 		
 		char c;
 		file.seek(offset, SEEK_CUR);
@@ -115,8 +117,9 @@ class LexFile {
 	 + cursor just past the last character in the file)
 	 +/
 	void advance(ulong count = 1) {
-		if (avail() < count)
+		if (avail() < count) {
 			throw new LexOverrunException();
+		}
 		
 		cur += count;
 		file.seek(count, SEEK_CUR);
@@ -149,20 +152,47 @@ class LexOverrunException : Exception {
 LexContext doLex(File inputFile) {
 	auto lexFile = new LexFile(inputFile);
 	auto ctx = LexContext();
+	char[] buffer = new char[1024];
+	uint bufPtr = 0;
 	
 	while (lexFile.avail() > 0)
 	{
 		char c = lexFile.peek();
 		
+		/* NOTE! for multi-char tokens, peek ahead one character and, if it is
+		 * not part of the token (i.e., no longer [A-Z]|[a-z]|_) then revert the
+		 * state back to DEFAULT */
+		
+		/* based on the current state, read a token and/or change the state */
 		if (ctx.state == LexState.DEFAULT) {
+			if (c == '/') {
+				if (lexFile.avail() >= 1 && lexFile.peek(1) == '/') {
+					ctx.state = LexState.COMMENT_LINE;
+					lexFile.advance();
+				}
+			}
+		} else if (ctx.state == LexState.COMMENT_BLOCK) {
 			
-		} else if (ctx.state == LexState.COMMENT) {
-			
+		} else if (ctx.state == LexState.COMMENT_LINE) {
+			if (c == '\n' || c == '\r') {
+				/* deal with \r\n and \n\r line endings */
+				if (lexFile.avail() >= 1) {
+					if (c == '\n' && lexFile.peek(1) == '\r') {
+						lexFile.advance();
+					} else if (c == '\r' && lexFile.peek(1) == '\n') {
+						lexFile.advance();
+					}
+				}
+				
+				ctx.state = LexState.DEFAULT;
+			}
 		} else {
 			
 		}
 		
-		writef("%c", c);
+		if (ctx.state == LexState.DEFAULT) {
+			writef("%c", c);
+		}
 		
 		lexFile.advance();
 	}
