@@ -8,12 +8,11 @@ import std.stdio;
 
 /++
  + Determines whether inputPath is valid, and then opens a File struct for that
- + path
+ + path.
  + 
  + Params:
  + inputPath =
- + the file path of the source file to be opened
- + 
+ +  the file path of the source file to be opened
  + Returns: opened File struct for the path given
  +/
 File getInputFile(string inputPath)
