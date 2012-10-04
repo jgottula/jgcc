@@ -18,5 +18,5 @@ void main(string[] args)
 	}
 	
 	File inputFile = getInputFile(args[1]);
-	LexContext lexCtx = lexFile(inputFile);
+	LexContext lexCtx = doLex(inputFile);
 }
