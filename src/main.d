@@ -7,8 +7,7 @@ import input;
 import lex;
 
 
-void main(string[] args)
-{
+void main(string[] args) {
 	stderr.write("jgcc: justin gottula's c compiler\n" ~
 		"      (c) 2012 justin gottula\n\n");
 	
