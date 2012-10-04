@@ -51,30 +51,34 @@ class LexFile {
 	 + 
 	 + Params:
 	 + file =
-	 + an already opened File struct
+	 +  an already opened File struct
 	 +/
 	this(File file) {
+		this.cur = 0;
+		
+		file.seek(0, SEEK_END);
+		this.len = file.tell();
+		file.rewind();
+		
 		this.file = file;
 	}
 	
 	/++
 	 + Indicates the current cursor position in the file.
 	 + 
-	 + Returns: the current cursor index.
+	 + Returns: the current cursor index
 	 +/
 	ulong tell() {
-		// TODO
-		return 0;
+		return cur;
 	}
 	
 	/++
 	 + Indicates how much of the file is left.
 	 + 
-	 + Returns: the number of characters left in the file.
+	 + Returns: the number of characters left in the file
 	 +/
 	ulong avail() {
-		// TODO
-		return 0;
+		return len - cur;
 	}
 	
 	/++
@@ -82,17 +86,22 @@ class LexFile {
 	 + 
 	 + Params:
 	 + offset =
-	 + optionally, the number of positions past the cursor at which to read
-	 + 
+	 +  optionally, the number of positions past the cursor at which to read
 	 + Returns: the character located offset positions past the cursor, without
-	 + modifying the cursor.
+	 + modifying the cursor
 	 + Throws: LexOverrunException if a character past the end of the file is
-	 + requested.
+	 + requested
 	 +/
 	char peek(ulong offset = 0) {
-		// throw an exception here if we have hit EOF
+		if (avail() <= offset)
+			throw new LexOverrunException();
 		
-		return 0;
+		char c;
+		file.seek(offset, SEEK_CUR);
+		assert(file.readf("%c", &c) == 1);
+		file.seek(cur, SEEK_SET);
+		
+		return c;
 	}
 	
 	/++
@@ -100,18 +109,22 @@ class LexFile {
 	 + 
 	 + Params:
 	 + count =
-	 + optionally, the number of positions by which to _advance the cursor
-	 + 
+	 +  optionally, the number of positions by which to _advance the cursor
 	 + Throws: LexOverrunException  if the requested advancement will place the
 	 + cursor past the end of the file (but not if the advancement places the
-	 + cursor just past the last character in the file).
+	 + cursor just past the last character in the file)
 	 +/
 	void advance(ulong count = 1) {
-		// likewise, throw on EOF here as well
+		if (avail() < count)
+			throw new LexOverrunException();
+		
+		cur += count;
+		file.seek(count, SEEK_CUR);
 	}
 	
 private:
 	File file;
+	ulong cur, len;
 }
 
 /++
@@ -119,8 +132,8 @@ private:
  + file.
  +/
 class LexOverrunException : Exception {
-	this(string msg) {
-		super(msg);
+	this() {
+		super("");
 	}
 }
 
@@ -130,12 +143,10 @@ class LexOverrunException : Exception {
  + 
  + Params:
  + inputFile =
- + an already opened File struct representing the source file to lex
- + 
- + Returns: a LexContext struct containing the list of tokens found in the file.
+ +  an already opened File struct representing the source file to lex
+ + Returns: a LexContext struct containing the list of tokens found in the file
  +/
-LexContext doLex(File inputFile)
-{
+LexContext doLex(File inputFile) {
 	auto lexFile = new LexFile(inputFile);
 	auto ctx = LexContext();
 	
@@ -150,6 +161,8 @@ LexContext doLex(File inputFile)
 		} else {
 			
 		}
+		
+		writef("%c", c);
 		
 		lexFile.advance();
 	}
