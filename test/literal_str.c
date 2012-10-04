@@ -1,10 +1,10 @@
-"hello world"
+char str1[] = "hello world";
 
-/*"invalid string with
-newline in the middle"*/
+/*char str2[] = "invalid string with
+newline in the middle";*/
 
-" space padded "
+char str3[] = " space padded ";
 
-"firstline\nsecondline"
+char str4[] = "firstline\nsecondline";
 
-"invalidstring
+char str5[] = "invalidstring
