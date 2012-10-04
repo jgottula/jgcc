@@ -15,7 +15,7 @@ import std.stdio;
  +  the file path of the source file to be opened
  + Returns: opened File struct for the path given
  +/
-File getInputFile(string inputPath) {
+File getInputFile(in string inputPath) {
 	if (inputPath.length < 3 || inputPath[$-2..$] != ".c") {
 		stderr.write("[input] expected a file ending in '.c'\n");
 		exit(1);
