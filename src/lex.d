@@ -5,6 +5,7 @@
  +/
 module lex;
 
+import std.ascii;
 import std.c.stdlib;
 import std.container;
 import std.conv;
@@ -27,14 +28,15 @@ const string[] keywords = [
  + Represents an individual token.
  +/
 enum Token : ushort {
-	EOF          = 0,
-	IDENTIFIER   = 1,
-	KEYWORD      = 2,
-	LITERAL_INT  = 3,
-	LITERAL_CHAR = 4,
-	LITERAL_STR  = 5,
-	BRACE_OPEN   = 6,
-	BRACE_CLOSE  = 7,
+	EOF           = 0,
+	IDENTIFIER    = 1,
+	KEYWORD       = 2,
+	LITERAL_STR   = 3,
+	LITERAL_CHAR  = 4,
+	LITERAL_INT   = 5,
+	LITERAL_FLOAT = 6,
+	BRACE_OPEN    = 7,
+	BRACE_CLOSE   = 8,
 }
 
 /++
@@ -62,9 +64,12 @@ enum LexState : ushort {
 	COMMENT_BLOCK = 1,
 	COMMENT_LINE  = 2,
 	IDENTIFIER    = 3,
-	LITERAL_INT   = 4,
+	LITERAL_STR   = 4,
 	LITERAL_CHAR  = 5,
-	LITERAL_STR   = 6,
+	LITERAL_INT_D = 6,
+	LITERAL_INT_O = 7,
+	LITERAL_INT_H = 8,
+	LITERAL_FLOAT = 9,
 }
 
 /++
@@ -228,6 +233,14 @@ LexContext doLex(File inputFile) {
 		++ctx.line;
 	}
 	
+	/+
+	 + Checks if an integer literal has been completed and, if so, adds it as a
+	 + token.
+	 +/
+	void finishInteger() {
+		// check ctx.state to determine if we are dec, oct, or hex
+	}
+	
 	/++
 	 + Checks if an identifier has been completed and, if so, adds it as a
 	 + token.
@@ -311,6 +324,21 @@ LexContext doLex(File inputFile) {
 				ctx.state = LexState.LITERAL_STR;
 			} else if (c == '\'') {
 				ctx.state = LexState.LITERAL_CHAR;
+			} else if (inPattern(c, "0-9")) {
+				buffer[bufLen++] = c;
+				
+				if (c == '0') {
+					if (lexFile.avail() >= 2 &&
+						toLower(lexFile.peek(1)) == 'x') {
+						ctx.state = LexState.LITERAL_INT_H;
+					} else {
+						ctx.state = LexState.LITERAL_INT_O;
+					}
+				} else {
+					ctx.state = LexState.LITERAL_INT_D;
+				}
+				
+				finishInteger();
 			} else if (inPattern(c, "A-Za-z_")) {
 				buffer[bufLen++] = c;
 				finishIdentifier();
@@ -331,10 +359,6 @@ LexContext doLex(File inputFile) {
 				handleNewLine();
 				ctx.state = LexState.DEFAULT;
 			}
-		} else if (ctx.state == LexState.IDENTIFIER) {
-			buffer[bufLen++] = c;
-			
-			finishIdentifier();
 		} else if (ctx.state == LexState.LITERAL_STR ||
 			ctx.state == LexState.LITERAL_CHAR) {
 			if (c == '\\') {
@@ -386,6 +410,16 @@ LexContext doLex(File inputFile) {
 			} else {
 				buffer[bufLen++] = c;
 			}
+		} else if (ctx.state == LexState.LITERAL_INT_D ||
+			ctx.state == LexState.LITERAL_INT_O ||
+			ctx.state == LexState.LITERAL_INT_H) {
+			buffer[bufLen++] = c;
+			
+			finishInteger();
+		} else if (ctx.state == LexState.IDENTIFIER) {
+			buffer[bufLen++] = c;
+			
+			finishIdentifier();
 		} else {
 			
 		}
