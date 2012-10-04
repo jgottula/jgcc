@@ -234,8 +234,23 @@ LexContext doLex(File inputFile) {
 	 + Appends the _escape sequence represented by escape to the buffer.
 	 +/
 	void appendEscapeChar(in char escape) {
-		if (escape == 'n') {
-			buffer[bufLen++] = '\n';
+		/* TODO: implement hex/octal escape sequences */
+		
+		if (escape == '\'' || escape == '"' ||
+			escape == '?' || escape == '\\') {
+			buffer[bufLen++] = escape;
+		} else if (escape == 'a') {
+			buffer[bufLen++] = '\a';
+		} else if (escape == 'b') {
+			buffer[bufLen++] = '\b';
+		} else if (escape == 'f') {
+			buffer[bufLen++] = '\f';
+		} else if (escape == 'r') {
+			buffer[bufLen++] = '\r';
+		} else if (escape == 't') {
+			buffer[bufLen++] = '\t';
+		} else if (escape == 'v') {
+			buffer[bufLen++] = '\v';
 		} else {
 			stderr.writef("[lex:%d] unknown escape sequence: '\\%c'\n",
 				ctx.line, escape);
