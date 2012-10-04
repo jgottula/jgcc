@@ -5,6 +5,7 @@
  +/
 module lex;
 
+import std.c.stdlib;
 import std.container;
 import std.stdio;
 
@@ -208,7 +209,11 @@ LexContext doLex(File inputFile) {
 		lexFile.advance();
 	}
 	
-	// TODO: decide if the state we are left in at EOF time is okay
+	/* determine if the state in which we find ourselves after EOF is correct */
+	if (ctx.state == LexState.COMMENT_BLOCK) {
+		stderr.write("[lex] encountered EOF while still in a comment block\n");
+		exit(1);
+	}
 	
 	return ctx;
 }
