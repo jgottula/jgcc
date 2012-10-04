@@ -263,11 +263,6 @@ LexContext doLex(File inputFile) {
 				
 				ctx.state = LexState.IDENTIFIER;
 			}
-			
-			/* simple echo for characters not eliminated by comments */
-			if (ctx.state == LexState.DEFAULT) {
-				writef("%c", c);
-			}
 		} else if (ctx.state == LexState.COMMENT_BLOCK) {
 			if (atNewLine()) {
 				handleNewLine();
@@ -331,6 +326,10 @@ LexContext doLex(File inputFile) {
 	if (ctx.state == LexState.COMMENT_BLOCK) {
 		stderr.writef("[lex:%d] encountered EOF while still in a comment " ~
 			"block\n", ctx.line);
+		exit(1);
+	} else if (ctx.state == LexState.LITERAL_STR) {
+		stderr.writef("[lex:%d] encountered EOF while still in a string " ~
+			"literal\n", ctx.line);
 		exit(1);
 	}
 	
