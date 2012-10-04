@@ -4,3 +4,5 @@ foo
  *
  */ bar // this is a line comment
 baz
+
+/* this comment doesn't end
