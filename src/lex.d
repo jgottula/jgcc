@@ -7,16 +7,21 @@ module lex;
 
 import std.c.stdlib;
 import std.container;
+import std.conv;
 import std.stdio;
+import std.string;
 
 
 /++
  + Represents an individual token.
  +/
 enum Token : ushort {
-	T_EOF          = 0,
-	T_KEYWORD      = 1,
-	T_LITERAL_INT  = 2,
+	EOF          = 0,
+	IDENTIFIER   = 1,
+	KEYWORD      = 2,
+	LITERAL_INT  = 3,
+	LITERAL_CHAR = 4,
+	LITERAL_STR  = 5,
 }
 
 /++
@@ -25,6 +30,13 @@ enum Token : ushort {
 struct TokenTag {
 	Token token;
 	string tag;
+	
+	/++
+	 + Initializes the class with token and no tag.
+	 +/
+	this(Token token) {
+		this.token = token;
+	}
 }
 
 /++
@@ -34,13 +46,14 @@ enum LexState : ushort {
 	DEFAULT       = 0,
 	COMMENT_BLOCK = 1,
 	COMMENT_LINE  = 2,
+	IDENTIFIER    = 3,
 }
 
 /++
  + Contains the lexer's state and the list of processed tokens.
  +/
 struct LexContext {
-	SList!TokenTag tokens;
+	DList!TokenTag tokens;
 	LexState state;
 }
 
@@ -94,7 +107,7 @@ class LexFile {
 	 + Throws: LexOverrunException if a character past the end of the file is
 	 + requested
 	 +/
-	char peek(ulong offset = 0) {
+	char peek(in ulong offset = 0) {
 		if (avail() <= offset) {
 			throw new LexOverrunException();
 		}
@@ -117,7 +130,7 @@ class LexFile {
 	 + cursor past the end of the file (but not if the advancement places the
 	 + cursor just past the last character in the file)
 	 +/
-	void advance(ulong count = 1) {
+	void advance(in ulong count = 1) {
 		if (avail() < count) {
 			throw new LexOverrunException();
 		}
@@ -154,10 +167,24 @@ LexContext doLex(File inputFile) {
 	auto lexFile = new LexFile(inputFile);
 	auto ctx = LexContext();
 	char[] buffer = new char[1024];
-	uint bufPtr = 0;
+	uint bufLen = 0;
 	
-	while (lexFile.avail() > 0)
-	{
+	/++
+	 + Checks if an identifier has been completed and, if so, adds it as a
+	 + token.
+	 +/
+	void finishIdentifier() {
+		if (lexFile.avail() < 1 || !inPattern(lexFile.peek(1), "A-Za-z0-9_")) {
+			auto token = TokenTag(Token.IDENTIFIER);
+			token.tag = to!string(buffer[0..bufLen]);
+			ctx.tokens.insertBack(token);
+			
+			bufLen = 0;
+			ctx.state = LexState.DEFAULT;
+		}
+	}
+	
+	while (lexFile.avail() > 0) {
 		char c = lexFile.peek();
 		
 		/* NOTE! for multi-char tokens, peek ahead one character and, if it is
@@ -176,9 +203,14 @@ LexContext doLex(File inputFile) {
 						ctx.state = LexState.COMMENT_BLOCK;
 					}
 				}
+			} else if (inPattern(c, "A-Za-z_")) {
+				buffer[bufLen++] = c;
+				finishIdentifier();
 				
+				ctx.state = LexState.IDENTIFIER;
 			}
 			
+			/* simple echo for characters not eliminated by comments */
 			if (ctx.state == LexState.DEFAULT) {
 				writef("%c", c);
 			}
@@ -202,6 +234,10 @@ LexContext doLex(File inputFile) {
 				
 				ctx.state = LexState.DEFAULT;
 			}
+		} else if (ctx.state == LexState.IDENTIFIER) {
+			buffer[bufLen++] = c;
+			
+			finishIdentifier();
 		} else {
 			
 		}
@@ -209,10 +245,16 @@ LexContext doLex(File inputFile) {
 		lexFile.advance();
 	}
 	
+	ctx.tokens.insertBack(TokenTag(Token.EOF));
+	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
 		stderr.write("[lex] encountered EOF while still in a comment block\n");
 		exit(1);
+	}
+	
+	foreach (t; ctx.tokens) {
+		writef("token: %s [%s]\n", t.token, t.tag);
 	}
 	
 	return ctx;
