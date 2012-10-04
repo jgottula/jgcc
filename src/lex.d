@@ -35,8 +35,9 @@ enum Token : ushort {
 	LITERAL_CHAR  = 4,
 	LITERAL_INT   = 5,
 	LITERAL_FLOAT = 6,
-	BRACE_OPEN    = 7,
-	BRACE_CLOSE   = 8,
+	SEMICOLON     = 7,
+	BRACE_OPEN    = 8,
+	BRACE_CLOSE   = 9,
 }
 
 /++
@@ -316,6 +317,8 @@ LexContext doLex(File inputFile) {
 						ctx.state = LexState.COMMENT_BLOCK;
 					}
 				}
+			} else if (c == ';') {
+				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON, ctx.line));
 			} else if (c == '{') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN, ctx.line));
 			} else if (c == '}') {
@@ -344,6 +347,12 @@ LexContext doLex(File inputFile) {
 				finishIdentifier();
 				
 				ctx.state = LexState.IDENTIFIER;
+			} else if (c == ' ' || c == '\t') {
+				/* ignore whitespace */
+			} else {
+				stderr.writef("[lex:%d] unexpected character: '%c'\n", ctx.line,
+					c);
+				//exit(1);
 			}
 		} else if (ctx.state == LexState.COMMENT_BLOCK) {
 			if (atNewLine()) {
@@ -441,7 +450,8 @@ LexContext doLex(File inputFile) {
 	}
 	
 	foreach (t; ctx.tokens) {
-		writef("token @%3d:  %s [%s]\n", t.line, t.token, t.tag);
+		writef("token @%3d:  %s%s\n", t.line, t.token,
+			(t.tag != "" ? (" [" ~ t.tag ~ "]") : ""));
 	}
 	
 	return ctx;
