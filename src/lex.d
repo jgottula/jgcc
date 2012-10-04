@@ -22,6 +22,8 @@ enum Token : ushort {
 	LITERAL_INT  = 3,
 	LITERAL_CHAR = 4,
 	LITERAL_STR  = 5,
+	BRACE_OPEN   = 6,
+	BRACE_CLOSE  = 7,
 }
 
 /++
@@ -279,6 +281,10 @@ LexContext doLex(File inputFile) {
 						ctx.state = LexState.COMMENT_BLOCK;
 					}
 				}
+			} else if (c == '{') {
+				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN, ctx.line));
+			} else if (c == '}') {
+				ctx.tokens.insertBack(TokenTag(Token.BRACE_CLOSE, ctx.line));
 			} else if (c == '"') {
 				ctx.state = LexState.LITERAL_STR;
 			} else if (c == '\'') {
