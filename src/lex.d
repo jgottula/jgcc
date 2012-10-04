@@ -62,6 +62,15 @@ struct LexContext {
 	LexState state;
 	ulong line;
 	
+	/+@property LexState state() {
+		return actualState;
+	}
+	@property LexState state(LexState newState) {
+		writef("state: %s\n", newState);
+		return (actualState = newState);
+	}
+	LexState actualState;+/
+	
 	this(ulong line) {
 		this.line = line;
 	}
@@ -257,6 +266,8 @@ LexContext doLex(File inputFile) {
 				}
 			} else if (c == '"') {
 				ctx.state = LexState.LITERAL_STR;
+			} else if (c == '\'') {
+				ctx.state = LexState.LITERAL_CHAR;
 			} else if (inPattern(c, "A-Za-z_")) {
 				buffer[bufLen++] = c;
 				finishIdentifier();
@@ -281,7 +292,8 @@ LexContext doLex(File inputFile) {
 			buffer[bufLen++] = c;
 			
 			finishIdentifier();
-		} else if (ctx.state == LexState.LITERAL_STR) {
+		} else if (ctx.state == LexState.LITERAL_STR ||
+			ctx.state == LexState.LITERAL_CHAR) {
 			if (c == '\\') {
 				if (lexFile.avail() >= 2) {
 					char next = lexFile.peek(1);
@@ -299,16 +311,34 @@ LexContext doLex(File inputFile) {
 						"sequence\n", ctx.line);
 					exit(1);
 				}
-			} else if (c == '"') {
+			} else if (ctx.state == LexState.LITERAL_STR && c == '"') {
 				auto token = TokenTag(Token.LITERAL_STR, ctx.line);
 				token.tag = to!string(buffer[0..bufLen]);
 				ctx.tokens.insertBack(token);
 				
 				bufLen = 0;
 				ctx.state = LexState.DEFAULT;
+			} else if (ctx.state == LexState.LITERAL_CHAR && c == '\'') {
+				if (bufLen == 0) {
+					stderr.writef("[lex:%d] found an empty char literal\n",
+						ctx.line);
+					exit(1);
+				} else if (bufLen > 1) {
+					stderr.writef("[lex:%d] found a char literal with too " ~
+						"many chars\n", ctx.line);
+					exit(1);
+				}
+				
+				auto token = TokenTag(Token.LITERAL_CHAR, ctx.line);
+				token.tag = to!string(buffer[0]);
+				ctx.tokens.insertBack(token);
+				
+				bufLen = 0;
+				ctx.state = LexState.DEFAULT;
 			} else if (c == '\n' || c == '\r') {
 				stderr.writef("[lex:%d] encountered a newline within a " ~
-					"string literal\n", ctx.line);
+					"%s literal\n", ctx.line, (ctx.state ==
+					LexState.LITERAL_STR ? "string" : "char"));
 				exit(1);
 			} else {
 				buffer[bufLen++] = c;
