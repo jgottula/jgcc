@@ -13,6 +13,17 @@ import std.string;
 
 
 /++
+ + String table of reserved keywords
+ +/
+const string[] keywords = [
+	"auto", "break", "case", "char", "const", "continue", "default", "do",
+	"double", "else", "enum", "extern", "float", "for", "goto", "if","int",
+	"long", "register", "return", "short", "signed","sizeof", "static",
+	"struct", "switch", "typedef", "union", "unsigned", "void", "volatile",
+	"while"
+];
+
+/++
  + Represents an individual token.
  +/
 enum Token : ushort {
@@ -223,8 +234,19 @@ LexContext doLex(File inputFile) {
 	 +/
 	void finishIdentifier() {
 		if (lexFile.avail() < 2 || !inPattern(lexFile.peek(1), "A-Za-z0-9_")) {
-			auto token = TokenTag(Token.IDENTIFIER, ctx.line);
-			token.tag = to!string(buffer[0..bufLen]);
+			string identifier = to!string(buffer[0..bufLen]);
+			bool isKeyword = false;
+			
+			foreach (keyword; keywords) {
+				if (identifier == keyword) {
+					isKeyword = true;
+					break;
+				}
+			}
+			
+			auto token = TokenTag((isKeyword ? Token.KEYWORD :
+				Token.IDENTIFIER), ctx.line);
+			token.tag = identifier;
 			ctx.tokens.insertBack(token);
 			
 			bufLen = 0;
