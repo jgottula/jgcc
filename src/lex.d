@@ -166,13 +166,28 @@ LexContext doLex(File inputFile) {
 		/* based on the current state, read a token and/or change the state */
 		if (ctx.state == LexState.DEFAULT) {
 			if (c == '/') {
-				if (lexFile.avail() >= 1 && lexFile.peek(1) == '/') {
-					ctx.state = LexState.COMMENT_LINE;
-					lexFile.advance();
+				if (lexFile.avail() >= 1) {
+					if (lexFile.peek(1) == '/') {
+						lexFile.advance();
+						ctx.state = LexState.COMMENT_LINE;
+					} else if (lexFile.peek(1) == '*') {
+						lexFile.advance();
+						ctx.state = LexState.COMMENT_BLOCK;
+					}
 				}
+				
+			}
+			
+			if (ctx.state == LexState.DEFAULT) {
+				writef("%c", c);
 			}
 		} else if (ctx.state == LexState.COMMENT_BLOCK) {
-			
+			if (c == '*') {
+				if (lexFile.avail() >= 1 && lexFile.peek(1) == '/') {
+					lexFile.advance();
+					ctx.state = LexState.DEFAULT;
+				}
+			}
 		} else if (ctx.state == LexState.COMMENT_LINE) {
 			if (c == '\n' || c == '\r') {
 				/* deal with \r\n and \n\r line endings */
@@ -188,10 +203,6 @@ LexContext doLex(File inputFile) {
 			}
 		} else {
 			
-		}
-		
-		if (ctx.state == LexState.DEFAULT) {
-			writef("%c", c);
 		}
 		
 		lexFile.advance();
