@@ -10,7 +10,6 @@ LIBS:=
 
 DC:=ldc2
 DFLAGS:=-w -wi -O1 -g -d-debug -disable-inlining -output-o -unittest
-DOCFLAGS:=-O0 -D
 
 OUT_EXE:=$(PROJNAME)
 
