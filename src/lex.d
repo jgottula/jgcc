@@ -44,15 +44,16 @@ enum Token : ushort {
  +/
 struct TokenTag {
 	Token token;
-	ulong line;
+	ulong line, col;
 	string tag;
 	
 	/++
-	 + Initializes the class with token and line, but no tag.
+	 + Initializes the class with token and line, optionally col, and no tag.
 	 +/
-	this(Token token, ulong line) {
+	this(Token token, ulong line, ulong col = 0) {
 		this.token = token;
 		this.line = line;
+		this.col = col;
 	}
 }
 
@@ -73,7 +74,7 @@ enum LexState : ushort {
 struct LexContext {
 	DList!TokenTag tokens;
 	LexState state;
-	ulong line;
+	ulong line, col;
 	
 	/+@property LexState state() {
 		return actualState;
@@ -84,8 +85,9 @@ struct LexContext {
 	}
 	LexState actualState;+/
 	
-	this(ulong line) {
+	this(ulong line = 1, ulong col = 1) {
 		this.line = line;
+		this.col = col;
 	}
 }
 
@@ -109,15 +111,17 @@ class LexOverrunException : Exception {
  + Returns: a LexContext struct containing the list of tokens found in the file
  +/
 LexContext lexSource(string source) {
-	auto ctx = LexContext(1);
+	auto ctx = LexContext(1, 1);
 	string cur = source;
 	char[] buffer = new char[0];
+	ulong startCol = 0;
 	
 	/++
 	 + Advances the cursor by the requested number of places
 	 +/
 	void advance(ulong count = 1) {
 		cur = cur[count..$];
+		ctx.col += count;
 	}
 	
 	/+
@@ -139,7 +143,9 @@ LexContext lexSource(string source) {
 			}
 		}
 		
+		/* col is set to zero because advance will get called after this */
 		++ctx.line;
+		ctx.col = 0;
 	}
 	
 	/+
@@ -147,7 +153,14 @@ LexContext lexSource(string source) {
 	 + token.
 	 +/
 	void finishInteger() {
+		string decPattern = "0-9";
+		string octPattern = "0-7";
+		string hexPattern = "0-9A-Fa-f";
+		
 		// check ctx.state to determine if we are dec, oct, or hex
+		
+		// if we are in dec mode and we run across a '.', switch the mode to
+		// float mode and call finishFloat
 	}
 	
 	/++
@@ -167,7 +180,7 @@ LexContext lexSource(string source) {
 			}
 			
 			auto token = TokenTag((isKeyword ? Token.KEYWORD :
-				Token.IDENTIFIER), ctx.line);
+				Token.IDENTIFIER), ctx.line, startCol);
 			token.tag = identifier;
 			ctx.tokens.insertBack(token);
 			
@@ -224,30 +237,43 @@ LexContext lexSource(string source) {
 					}
 				}
 			} else if (cur[0] == ';') {
-				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON,
+					ctx.line, ctx.col));
 			} else if (cur[0] == ',') {
-				ctx.tokens.insertBack(TokenTag(Token.COMMA, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.COMMA,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '&') {
-				ctx.tokens.insertBack(TokenTag(Token.ADDRESSOF, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.ADDRESSOF,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '*') {
-				ctx.tokens.insertBack(TokenTag(Token.DEREFERENCE, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.DEREFERENCE,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '{') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '}') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACE_CLOSE, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.BRACE_CLOSE,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '(') {
-				ctx.tokens.insertBack(TokenTag(Token.PAREN_OPEN, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.PAREN_OPEN,
+					ctx.line, ctx.col));
 			} else if (cur[0] == ')') {
-				ctx.tokens.insertBack(TokenTag(Token.PAREN_CLOSE, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.PAREN_CLOSE,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '[') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACKET_OPEN, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.BRACKET_OPEN,
+					ctx.line, ctx.col));
 			} else if (cur[0] == ']') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACKET_CLOSE, ctx.line));
+				ctx.tokens.insertBack(TokenTag(Token.BRACKET_CLOSE,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '"') {
+				startCol = ctx.col;
 				ctx.state = LexState.LITERAL_STR;
 			} else if (cur[0] == '\'') {
+				startCol = ctx.col;
 				ctx.state = LexState.LITERAL_CHAR;
 			} else if (inPattern(cur[0], "0-9")) {
+				startCol = ctx.col;
 				buffer ~= cur[0];
 				
 				if (cur[0] == '0') {
@@ -262,6 +288,7 @@ LexContext lexSource(string source) {
 				
 				finishInteger();
 			} else if (inPattern(cur[0], "A-Za-z_")) {
+				startCol = ctx.col;
 				buffer ~= cur[0];
 				finishIdentifier();
 				
@@ -305,7 +332,7 @@ LexContext lexSource(string source) {
 					exit(1);
 				}
 			} else if (ctx.state == LexState.LITERAL_STR && cur[0] == '"') {
-				auto token = TokenTag(Token.LITERAL_STR, ctx.line);
+				auto token = TokenTag(Token.LITERAL_STR, ctx.line, startCol);
 				token.tag = to!string(buffer);
 				ctx.tokens.insertBack(token);
 				
@@ -322,7 +349,7 @@ LexContext lexSource(string source) {
 					exit(1);
 				}
 				
-				auto token = TokenTag(Token.LITERAL_CHAR, ctx.line);
+				auto token = TokenTag(Token.LITERAL_CHAR, ctx.line, startCol);
 				token.tag = to!string(buffer[0]);
 				ctx.tokens.insertBack(token);
 				
@@ -353,7 +380,7 @@ LexContext lexSource(string source) {
 		advance();
 	}
 	
-	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line));
+	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line, ctx.col));
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
@@ -368,7 +395,7 @@ LexContext lexSource(string source) {
 	
 	write("[lex] tokens:\n");
 	foreach (t; ctx.tokens) {
-		writef("line%4d:  %s%s\n", t.line, t.token,
+		writef("line%4d  col %2d:  %s%s\n", t.line, t.col, t.token,
 			(t.tag != "" ? (" [" ~ t.tag ~ "]") : ""));
 	}
 	
