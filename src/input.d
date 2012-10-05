@@ -28,7 +28,7 @@ void readSource(in string inputPath, out string fileContents) {
 		exit(1);
 	}
 	
-	if (!exists(inputPath)) {
+	if (!inputPath.exists()) {
 		stderr.writef("[input] the source file '%s' does not exist\n",
 			inputPath);
 		exit(1);
