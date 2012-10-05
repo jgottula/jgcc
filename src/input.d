@@ -53,6 +53,7 @@ void readSource(in string inputPath, out string fileContents) {
 	
 	fileContents = to!string(buffer);
 	
-	/* remove me */
-	write(fileContents);
+	stderr.write("---- SOURCE DUMP ----\n");
+	stderr.write(fileContents);
+	stderr.write("\n---------------------\n");
 }
