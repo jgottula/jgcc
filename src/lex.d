@@ -99,16 +99,6 @@ struct LexContext {
 	}
 }
 
-/**
- * Indicates that the lexer has attempted to read or advance past the end of the
- * file.
- */
-class LexOverrunException : Exception {
-	this() {
-		super("");
-	}
-}
-
 
 /**
  * Lexes the contents of inputFile.
