@@ -8,10 +8,10 @@
 PROJNAME:=jgcc
 LIBS:=
 
-# -funittest is exceptionally slow
-DFLAGS:=-Wall -O1 -ggdb3 -pipe
-DOCFLAGS:=-O0 -fdoc
-LINKFLAGS:=-fwhole-program -fuse-linker-plugin -pipe $(LIBS)
+DC:=ldc2
+DFLAGS:=-w -wi -O1 -g -d-debug -disable-inlining -output-o -unittest
+DOCFLAGS:=-O0 -D
+LINKFLAGS:=$(LIBS)
 
 OUT_EXE:=$(PROJNAME)
 
@@ -22,21 +22,16 @@ DOCS=$(patsubst %.d,../doc/%.html,$(SOURCES))
 CLEAN=$(wildcard jgcc) $(wildcard *.o) $(wildcard ../doc/*.html)
 
 
-.PHONY: all doc clean
+.PHONY: all clean
 
 # default rule
-all: $(PROJNAME) doc
+all: $(PROJNAME)
 
 $(PROJNAME): $(OBJECTS)
-	gdc $(LINKFLAGS) -o $@ $^
-
-doc: $(DOCS)
-
-../doc/%.html: %.d Makefile
-	gdc $(DOCFLAGS) -fdoc-file=$@ -o /dev/null -c $<
+	$(DC) $(LINKFLAGS) -of=$@ $^
 
 %.o: %.d Makefile
-	gdc $(DFLAGS) -c $<
+	$(DC) $(DFLAGS) -Dd=../doc -c $<
 
 clean:
 	rm -f $(CLEAN)
