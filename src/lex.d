@@ -266,11 +266,26 @@ LexContext lexSource(string source) {
 					addToken(Token.OR);
 				}
 			} else if (cur[0] == '+') {
-				addToken(Token.ADD);
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.ASSIGN_ADD);
+					advance();
+				} else {
+					addToken(Token.ADD);
+				}
 			} else if (cur[0] == '-') {
-				addToken(Token.SUBTRACT);
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.ASSIGN_SUBTRACT);
+					advance();
+				} else {
+					addToken(Token.SUBTRACT);
+				}
 			} else if (cur[0] == '*') {
-				addToken(Token.MULTIPLY);
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.ASSIGN_MULTIPLY);
+					advance();
+				} else {
+					addToken(Token.MULTIPLY);
+				}
 			} else if (cur[0] == '/') {
 				if (cur.length >= 2 && cur[1] == '/') {
 					advance();
@@ -278,11 +293,19 @@ LexContext lexSource(string source) {
 				} else if (cur.length >= 2 && cur[1] == '*') {
 					advance();
 					ctx.state = LexState.COMMENT_BLOCK;
+				} else if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.ASSIGN_DIVIDE);
+					advance();
 				} else {
 					addToken(Token.DIVIDE);
 				}
 			} else if (cur[0] == '%') {
-				addToken(Token.MODULO);
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.ASSIGN_MODULO);
+					advance();
+				} else {
+					addToken(Token.MODULO);
+				}
 			} else if (cur[0] == ';') {
 				addToken(Token.SEMICOLON);
 			} else if (cur[0] == ',') {
