@@ -32,10 +32,14 @@ enum Token : ushort {
 	LITERAL_STR, LITERAL_CHAR, LITERAL_INT, LITERAL_FLOAT,
 	SEMICOLON,
 	COMMA,
-	ADDRESSOF, DEREFERENCE,
+	DOT, ARROW,
 	BRACE_OPEN, BRACE_CLOSE,
 	PAREN_OPEN, PAREN_CLOSE,
 	BRACKET_OPEN, BRACKET_CLOSE,
+	ADD, SUBTRACT, MULTIPLY, DIVIDE, MODULO,
+	NOT, AND, OR, XOR,
+	BANG, SS_AND, SS_OR,
+	ASSIGN, ASSIGN_ADD, ASSIGN_SUBTRACT, ASSIGN_MULTIPLY, ASSIGN_DIVIDE,
 	EOF,
 }
 
@@ -226,27 +230,67 @@ LexContext lexSource(string source) {
 		if (ctx.state == LexState.DEFAULT) {
 			if (atNewLine()) {
 				handleNewLine();
+			} else if (cur[0] == '.') {
+				ctx.tokens.insertBack(TokenTag(Token.DOT,
+					ctx.line, ctx.col));
+			} else if (cur[0] == '-') {
+				if (cur.length >= 2 && cur[1] == '>') {
+					ctx.tokens.insertBack(TokenTag(Token.ARROW,
+						ctx.line, ctx.col));
+					advance();
+				}
+			} else if (cur[0] == '~') {
+				ctx.tokens.insertBack(TokenTag(Token.NOT,
+					ctx.line, ctx.col));
+			} else if (cur[0] == '!') {
+				ctx.tokens.insertBack(TokenTag(Token.BANG,
+					ctx.line, ctx.col));
+			} else if (cur[0] == '^') {
+				ctx.tokens.insertBack(TokenTag(Token.XOR,
+					ctx.line, ctx.col));
+			} else if (cur[0] == '&') {
+				if (cur.length >= 2 && cur[1] == '&') {
+					ctx.tokens.insertBack(TokenTag(Token.SS_AND,
+						ctx.line, ctx.col));
+					advance();
+				} else {
+					ctx.tokens.insertBack(TokenTag(Token.AND,
+						ctx.line, ctx.col));
+				}
+			} else if (cur[0] == '|') {
+				if (cur.length >= 2 && cur[1] == '|') {
+					ctx.tokens.insertBack(TokenTag(Token.SS_OR,
+						ctx.line, ctx.col));
+					advance();
+				} else {
+					ctx.tokens.insertBack(TokenTag(Token.OR,
+						ctx.line, ctx.col));
+				}
+			} else if (cur[0] == '+') {
+				ctx.tokens.insertBack(TokenTag(Token.ADD,
+					ctx.line, ctx.col));
+			} else if (cur[0] == '-') {
+				ctx.tokens.insertBack(TokenTag(Token.SUBTRACT,
+					ctx.line, ctx.col));
+			} else if (cur[0] == '*') {
+				ctx.tokens.insertBack(TokenTag(Token.MULTIPLY,
+					ctx.line, ctx.col));
 			} else if (cur[0] == '/') {
-				if (cur.length >= 2) {
-					if (cur[1] == '/') {
-						advance();
-						ctx.state = LexState.COMMENT_LINE;
-					} else if (cur[1] == '*') {
-						advance();
-						ctx.state = LexState.COMMENT_BLOCK;
-					}
+				if (cur.length >= 2 && cur[1] == '/') {
+					advance();
+					ctx.state = LexState.COMMENT_LINE;
+				} else if (cur.length >= 2 && cur[1] == '*') {
+					advance();
+					ctx.state = LexState.COMMENT_BLOCK;
+				} else {
+					ctx.tokens.insertBack(TokenTag(Token.DIVIDE,
+						ctx.line, ctx.col));
 				}
 			} else if (cur[0] == ';') {
 				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON,
 					ctx.line, ctx.col));
 			} else if (cur[0] == ',') {
 				ctx.tokens.insertBack(TokenTag(Token.COMMA,
-					ctx.line, ctx.col));
-			} else if (cur[0] == '&') {
-				ctx.tokens.insertBack(TokenTag(Token.ADDRESSOF,
-					ctx.line, ctx.col));
-			} else if (cur[0] == '*') {
-				ctx.tokens.insertBack(TokenTag(Token.DEREFERENCE,
 					ctx.line, ctx.col));
 			} else if (cur[0] == '{') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN,
