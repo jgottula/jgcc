@@ -21,6 +21,7 @@ void main(string[] args) {
 		exit(1);
 	}
 	
-	File inputFile = getInputFile(args[1]);
-	LexContext lexCtx = doLex(inputFile);
+	string source;
+	readSource(args[1], source);
+	LexContext lexCtx = lexSource(source);
 }

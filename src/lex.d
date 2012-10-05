@@ -90,93 +90,6 @@ struct LexContext {
 }
 
 /++
- + Encapsulates a File struct with access methods suitable to a lexer.
- +/
-class LexFile {
-	/++
-	 + Creates a new wrapper from an already-opened File struct.
-	 + 
-	 + Params:
-	 + file =
-	 +  an already opened File struct
-	 +/
-	this(File file) {
-		this.cur = 0;
-		
-		file.seek(0, SEEK_END);
-		this.len = file.tell();
-		file.rewind();
-		
-		this.file = file;
-	}
-	
-	/++
-	 + Indicates the current cursor position in the file.
-	 + 
-	 + Returns: the current cursor index
-	 +/
-	ulong tell() {
-		return cur;
-	}
-	
-	/++
-	 + Indicates how much of the file is left.
-	 + 
-	 + Returns: the number of characters left in the file
-	 +/
-	ulong avail() {
-		return len - cur;
-	}
-	
-	/++
-	 + Peeks at a character at or past the cursor.
-	 + 
-	 + Params:
-	 + offset =
-	 +  optionally, the number of positions past the cursor at which to read
-	 + Returns: the character located offset positions past the cursor, without
-	 + modifying the cursor
-	 + Throws: LexOverrunException if a character past the end of the file is
-	 + requested
-	 +/
-	char peek(in ulong offset = 0) {
-		if (avail() <= offset) {
-			throw new LexOverrunException();
-		}
-		
-		char c;
-		file.seek(offset, SEEK_CUR);
-		assert(file.readf("%c", &c) == 1);
-		file.seek(cur, SEEK_SET);
-		
-		return c;
-	}
-	
-	/++
-	 + Advances the cursor by count positions.
-	 + 
-	 + Params:
-	 + count =
-	 +  optionally, the number of positions by which to _advance the cursor
-	 + Throws: LexOverrunException  if the requested advancement will place the
-	 + cursor past the end of the file (but not if the advancement places the
-	 + cursor just past the last character in the file)
-	 +/
-	void advance(in ulong count = 1) {
-		if (avail() < count) {
-			throw new LexOverrunException();
-		}
-		
-		cur += count;
-		file.seek(count, SEEK_CUR);
-	}
-	
-private:
-	File file;
-	ulong cur, len;
-}
-
-/++
  + Indicates that the lexer has attempted to read or advance past the end of the
  + file.
  +/
@@ -191,37 +104,38 @@ class LexOverrunException : Exception {
  + Lexes the contents of inputFile.
  + 
  + Params:
- + inputFile =
- +  an already opened File struct representing the source file to lex
+ + source =
+ +  a string containing the source code to be lexed
  + Returns: a LexContext struct containing the list of tokens found in the file
  +/
-LexContext doLex(File inputFile) {
-	auto lexFile = new LexFile(inputFile);
+LexContext lexSource(string source) {
 	auto ctx = LexContext(1);
-	char[] buffer = new char[1024];
-	uint bufLen = 0;
+	string cur = source;
+	char[] buffer = new char[0];
+	
+	/++
+	 + Advances the cursor by the requested number of places
+	 +/
+	void advance(ulong count = 1) {
+		cur = cur[count..$];
+	}
 	
 	/+
 	 + Checks whether the cursor is at a newline.
 	 +/
 	bool atNewLine() {
-		char c = lexFile.peek();
-		
-		return (c == '\n' || c == '\r');
+		return (cur[0] == '\n' || cur[0] == '\r');
 	}
 	
 	/++
 	 + Handles weird line endings and adjusts the context for newlines.
 	 +/
 	void handleNewLine() {
-		char c = lexFile.peek();
-		
 		/* deal with \r\n and \n\r line endings */
-		if (lexFile.avail() >= 2) {
-			char next = lexFile.peek(1);
-			
-			if ((c == '\n' && next == '\r') || (c == '\r' && next == '\n')) {
-				lexFile.advance();
+		if (cur.length > 1) {
+			if ((cur[0] == '\n' && cur[1] == '\r') ||
+				(cur[0] == '\r' && cur[1] == '\n')) {
+				advance();
 			}
 		}
 		
@@ -241,8 +155,8 @@ LexContext doLex(File inputFile) {
 	 + token.
 	 +/
 	void finishIdentifier() {
-		if (lexFile.avail() < 2 || !inPattern(lexFile.peek(1), "A-Za-z0-9_")) {
-			string identifier = to!string(buffer[0..bufLen]);
+		if (cur.length == 1 || !inPattern(cur[1], "A-Za-z0-9_")) {
+			string identifier = to!string(buffer);
 			bool isKeyword = false;
 			
 			foreach (keyword; keywords) {
@@ -257,7 +171,7 @@ LexContext doLex(File inputFile) {
 			token.tag = identifier;
 			ctx.tokens.insertBack(token);
 			
-			bufLen = 0;
+			buffer.length = 0;
 			ctx.state = LexState.DEFAULT;
 		}
 	}
@@ -270,19 +184,19 @@ LexContext doLex(File inputFile) {
 		
 		if (escape == '\'' || escape == '"' ||
 			escape == '?' || escape == '\\') {
-			buffer[bufLen++] = escape;
+			buffer ~= escape;
 		} else if (escape == 'a') {
-			buffer[bufLen++] = '\a';
+			buffer ~= '\a';
 		} else if (escape == 'b') {
-			buffer[bufLen++] = '\b';
+			buffer ~= '\b';
 		} else if (escape == 'f') {
-			buffer[bufLen++] = '\f';
+			buffer ~= '\f';
 		} else if (escape == 'r') {
-			buffer[bufLen++] = '\r';
+			buffer ~= '\r';
 		} else if (escape == 't') {
-			buffer[bufLen++] = '\t';
+			buffer ~= '\t';
 		} else if (escape == 'v') {
-			buffer[bufLen++] = '\v';
+			buffer ~= '\v';
 		} else {
 			stderr.writef("[lex:%d] unknown escape sequence: '\\%c'\n",
 				ctx.line, escape);
@@ -290,9 +204,7 @@ LexContext doLex(File inputFile) {
 		}
 	}
 	
-	while (lexFile.avail() > 0) {
-		char c = lexFile.peek();
-		
+	while (cur.length > 0) {
 		/* NOTE! for multi-char tokens, peek ahead one character and, if it is
 		 * not part of the token (i.e., no longer [A-Z]|[a-z]|_) then revert the
 		 * state back to DEFAULT */
@@ -301,46 +213,45 @@ LexContext doLex(File inputFile) {
 		if (ctx.state == LexState.DEFAULT) {
 			if (atNewLine()) {
 				handleNewLine();
-			} else if (c == '/') {
-				if (lexFile.avail() >= 2) {
-					if (lexFile.peek(1) == '/') {
-						lexFile.advance();
+			} else if (cur[0] == '/') {
+				if (cur.length >= 2) {
+					if (cur[1] == '/') {
+						advance();
 						ctx.state = LexState.COMMENT_LINE;
-					} else if (lexFile.peek(1) == '*') {
-						lexFile.advance();
+					} else if (cur[1] == '*') {
+						advance();
 						ctx.state = LexState.COMMENT_BLOCK;
 					}
 				}
-			} else if (c == ';') {
+			} else if (cur[0] == ';') {
 				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON, ctx.line));
-			} else if (c == ',') {
+			} else if (cur[0] == ',') {
 				ctx.tokens.insertBack(TokenTag(Token.COMMA, ctx.line));
-			} else if (c == '&') {
+			} else if (cur[0] == '&') {
 				ctx.tokens.insertBack(TokenTag(Token.ADDRESSOF, ctx.line));
-			} else if (c == '*') {
+			} else if (cur[0] == '*') {
 				ctx.tokens.insertBack(TokenTag(Token.DEREFERENCE, ctx.line));
-			} else if (c == '{') {
+			} else if (cur[0] == '{') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN, ctx.line));
-			} else if (c == '}') {
+			} else if (cur[0] == '}') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACE_CLOSE, ctx.line));
-			} else if (c == '(') {
+			} else if (cur[0] == '(') {
 				ctx.tokens.insertBack(TokenTag(Token.PAREN_OPEN, ctx.line));
-			} else if (c == ')') {
+			} else if (cur[0] == ')') {
 				ctx.tokens.insertBack(TokenTag(Token.PAREN_CLOSE, ctx.line));
-			} else if (c == '[') {
+			} else if (cur[0] == '[') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACKET_OPEN, ctx.line));
-			} else if (c == ']') {
+			} else if (cur[0] == ']') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACKET_CLOSE, ctx.line));
-			} else if (c == '"') {
+			} else if (cur[0] == '"') {
 				ctx.state = LexState.LITERAL_STR;
-			} else if (c == '\'') {
+			} else if (cur[0] == '\'') {
 				ctx.state = LexState.LITERAL_CHAR;
-			} else if (inPattern(c, "0-9")) {
-				buffer[bufLen++] = c;
+			} else if (inPattern(cur[0], "0-9")) {
+				buffer ~= cur[0];
 				
-				if (c == '0') {
-					if (lexFile.avail() >= 2 &&
-						toLower(lexFile.peek(1)) == 'x') {
+				if (cur[0] == '0') {
+					if (cur.length >= 2 && toLower(cur[1]) == 'x') {
 						ctx.state = LexState.LITERAL_INT_H;
 					} else {
 						ctx.state = LexState.LITERAL_INT_O;
@@ -350,24 +261,24 @@ LexContext doLex(File inputFile) {
 				}
 				
 				finishInteger();
-			} else if (inPattern(c, "A-Za-z_")) {
-				buffer[bufLen++] = c;
+			} else if (inPattern(cur[0], "A-Za-z_")) {
+				buffer ~= cur[0];
 				finishIdentifier();
 				
 				ctx.state = LexState.IDENTIFIER;
-			} else if (c == ' ' || c == '\t') {
+			} else if (cur[0] == ' ' || cur[0] == '\t') {
 				/* ignore whitespace */
 			} else {
 				stderr.writef("[lex:%d] unexpected character: '%c'\n", ctx.line,
-					c);
+					cur[0]);
 				//exit(1);
 			}
 		} else if (ctx.state == LexState.COMMENT_BLOCK) {
 			if (atNewLine()) {
 				handleNewLine();
-			} else if (c == '*') {
-				if (lexFile.avail() >= 2 && lexFile.peek(1) == '/') {
-					lexFile.advance();
+			} else if (cur[0] == '*') {
+				if (cur.length >= 2 && cur[1] == '/') {
+					advance();
 					ctx.state = LexState.DEFAULT;
 				}
 			}
@@ -378,36 +289,34 @@ LexContext doLex(File inputFile) {
 			}
 		} else if (ctx.state == LexState.LITERAL_STR ||
 			ctx.state == LexState.LITERAL_CHAR) {
-			if (c == '\\') {
-				if (lexFile.avail() >= 2) {
-					char next = lexFile.peek(1);
-					
-					if (next == '\n' || next == '\r') {
+			if (cur[0] == '\\') {
+				if (cur.length >= 2) {
+					if (cur[1] == '\n' || cur[1] == '\r') {
 						stderr.writef("[lex:%d] escape sequence interrupted " ~
 							"by newline\n", ctx.line);
 						exit(1);
 					} else {
-						appendEscapeChar(next);
-						lexFile.advance();
+						appendEscapeChar(cur[1]);
+						advance();
 					}
 				} else {
 					stderr.writef("[lex:%d] found an incomplete escape " ~
 						"sequence\n", ctx.line);
 					exit(1);
 				}
-			} else if (ctx.state == LexState.LITERAL_STR && c == '"') {
+			} else if (ctx.state == LexState.LITERAL_STR && cur[0] == '"') {
 				auto token = TokenTag(Token.LITERAL_STR, ctx.line);
-				token.tag = to!string(buffer[0..bufLen]);
+				token.tag = to!string(buffer);
 				ctx.tokens.insertBack(token);
 				
-				bufLen = 0;
+				buffer.length = 0;
 				ctx.state = LexState.DEFAULT;
-			} else if (ctx.state == LexState.LITERAL_CHAR && c == '\'') {
-				if (bufLen == 0) {
+			} else if (ctx.state == LexState.LITERAL_CHAR && cur[0] == '\'') {
+				if (buffer.length == 0) {
 					stderr.writef("[lex:%d] found an empty char literal\n",
 						ctx.line);
 					exit(1);
-				} else if (bufLen > 1) {
+				} else if (buffer.length > 1) {
 					stderr.writef("[lex:%d] found a char literal with too " ~
 						"many chars\n", ctx.line);
 					exit(1);
@@ -417,31 +326,31 @@ LexContext doLex(File inputFile) {
 				token.tag = to!string(buffer[0]);
 				ctx.tokens.insertBack(token);
 				
-				bufLen = 0;
+				buffer.length = 0;
 				ctx.state = LexState.DEFAULT;
-			} else if (c == '\n' || c == '\r') {
+			} else if (cur[0] == '\n' || cur[0] == '\r') {
 				stderr.writef("[lex:%d] encountered a newline within a " ~
 					"%s literal\n", ctx.line, (ctx.state ==
 					LexState.LITERAL_STR ? "string" : "char"));
 				exit(1);
 			} else {
-				buffer[bufLen++] = c;
+				buffer ~= cur[0];
 			}
 		} else if (ctx.state == LexState.LITERAL_INT_D ||
 			ctx.state == LexState.LITERAL_INT_O ||
 			ctx.state == LexState.LITERAL_INT_H) {
-			buffer[bufLen++] = c;
+			buffer ~= cur[0];
 			
 			finishInteger();
 		} else if (ctx.state == LexState.IDENTIFIER) {
-			buffer[bufLen++] = c;
+			buffer ~= cur[0];
 			
 			finishIdentifier();
 		} else {
 			
 		}
 		
-		lexFile.advance();
+		advance();
 	}
 	
 	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line));

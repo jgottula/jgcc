@@ -6,21 +6,23 @@
 module input;
 
 import std.c.stdlib;
+import std.conv;
 import std.exception;
 import std.file;
 import std.stdio;
 
 
 /++
- + Determines whether inputPath is valid, and then opens a File struct for that
- + path.
+ + Determines whether inputPath is valid, opens the file, and reads its contents
+ + into memory
  + 
  + Params:
  + inputPath =
  +  the file path of the source file to be opened
- + Returns: opened File struct for the path given
+ + fileContents =
+ +  a string which will contain the full contents of the file
  +/
-File getInputFile(in string inputPath) {
+void readSource(in string inputPath, out string fileContents) {
 	if (inputPath.length < 3 || inputPath[$-2..$] != ".c") {
 		stderr.write("[input] expected a file ending in '.c'\n");
 		exit(1);
@@ -43,5 +45,14 @@ File getInputFile(in string inputPath) {
 		exit(1);
 	}
 	
-	return inputFile;
+	inputFile.seek(0, SEEK_END);
+	char[] buffer = new char[inputFile.tell()];
+	
+	inputFile.seek(0, SEEK_SET);
+	inputFile.rawRead(buffer);
+	
+	fileContents = to!string(buffer);
+	
+	/* remove me */
+	write(fileContents);
 }
