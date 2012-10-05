@@ -9,15 +9,15 @@ PROJNAME:=jgcc
 LIBS:=
 
 DC:=ldc2
-DFLAGS:=-w -wi -O1 -g -d-debug -disable-inlining -output-bc -unittest
+DFLAGS:=-w -wi -O1 -g -d-debug -disable-inlining -output-o -unittest
 
 OUT_EXE:=$(PROJNAME)
 
 # evaluated when used
 SOURCES=$(wildcard *.d)
-OBJECTS=$(patsubst %.d,%.bc,$(SOURCES))
+OBJECTS=$(patsubst %.d,%.o,$(SOURCES))
 DOCS=$(patsubst %.d,../doc/%.html,$(SOURCES))
-CLEAN=$(wildcard jgcc) $(wildcard *.bc) $(wildcard ../doc/*.html)
+CLEAN=$(wildcard jgcc) $(wildcard *.o) $(wildcard ../doc/*.html)
 
 
 .PHONY: all clean
@@ -28,7 +28,7 @@ all: $(PROJNAME)
 $(PROJNAME): $(OBJECTS)
 	$(DC) $(DFLAGS) $(LIBS) -of=$@ $^
 
-%.bc: %.d Makefile
+%.o: %.d Makefile
 	$(DC) $(DFLAGS) -Dd=../doc -c $<
 
 clean:
