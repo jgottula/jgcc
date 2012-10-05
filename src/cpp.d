@@ -7,6 +7,7 @@ module cpp;
 
 import std.conv;
 import std.stdio;
+import std.string;
 
 
 /**
@@ -42,7 +43,11 @@ void preProcess(in string before, out string after) {
 	
 	after = to!string(buffer);
 	
-	stderr.write("---- CPP OUTPUT -----\n");
-	stderr.write(after);
-	stderr.write("\n---------------------\n");
+	stderr.write("---------------------------------- CPP OUTPUT " ~
+		"----------------------------------\n");
+	foreach (ulong num, line; after.splitLines()) {
+		stderr.writef("%3d|%s\n", num, line);
+	}
+	stderr.write("----------------------------------------------" ~
+		"----------------------------------\n");
 }
