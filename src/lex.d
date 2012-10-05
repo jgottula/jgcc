@@ -42,6 +42,7 @@ enum Token : ushort {
 	BANG, SS_AND, SS_OR,
 	ASSIGN,
 	ASSIGN_ADD, ASSIGN_SUBTRACT, ASSIGN_MULTIPLY, ASSIGN_DIVIDE, ASSIGN_MODULO,
+	EQUAL, NOT_EQUAL,
 	EOF,
 }
 
@@ -275,7 +276,19 @@ LexContext lexSource(string source) {
 			} else if (cur[0] == '~') {
 				addToken(Token.NOT);
 			} else if (cur[0] == '!') {
-				addToken(Token.BANG);
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.NOT_EQUAL);
+					advance();
+				} else {
+					addToken(Token.BANG);
+				}
+			} else if (cur[0] == '=') {
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(Token.EQUAL);
+					advance();
+				} else {
+					addToken(Token.ASSIGN);
+				}
 			} else if (cur[0] == '^') {
 				addToken(Token.XOR);
 			} else if (cur[0] == '&') {
