@@ -380,7 +380,7 @@ LexContext lexSource(string source) {
 		advance();
 	}
 	
-	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line, ctx.col));
+	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line));
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
