@@ -5,6 +5,7 @@
  */
 module lex;
 
+import core.vararg;
 import std.ascii;
 import std.c.stdlib;
 import std.container;
@@ -27,10 +28,11 @@ const string[] keywords = [
 /**
  * Represents an individual token.
  */
-enum Token : ubyte {
+enum TokenType : ubyte {
 	IDENTIFIER, KEYWORD,
-	LITERAL_INT_O, LITERAL_INT_D, LITERAL_INT_H,
-	LITERAL_STR, LITERAL_CHAR, LITERAL_FLOAT,
+	LITERAL_INT, LITERAL_UINT, LITERAL_LONG, LITERAL_ULONG,
+	LITERAL_FLOAT, LITERAL_DOUBLE,
+	LITERAL_STR, LITERAL_CHAR,
 	SEMICOLON,
 	COMMA,
 	DOT, ARROW,
@@ -43,25 +45,59 @@ enum Token : ubyte {
 	ASSIGN,
 	ASSIGN_ADD, ASSIGN_SUBTRACT, ASSIGN_MULTIPLY, ASSIGN_DIVIDE, ASSIGN_MODULO,
 	EQUAL, NOT_EQUAL,
+	LESS, LESS_EQUAL,
+	GREATER, GREATER_EQUAL,
 	EOF,
 }
 
 /**
- * Combines a Token enum with a string tag (for identifiers, keywords, etc.).
+ * Combines a TokenType enum with a string tag (for identifiers, keywords, etc.).
  */
-struct TokenTag {
-	Token token;
+struct Token {
+	TokenType type;
 	ulong line, col;
-	string tag;
+	
+	union {
+		int tagInt;
+		uint tagUInt;
+		long tagLong;
+		ulong tagULong;
+		
+		float tagFlt;
+		double tagDbl;
+		
+		string tagStr;
+	}
 	
 	/**
-	 * Initializes the class with token and line, optionally col, and no tag.
+	 * Initializes the struct, optionally with a tag of appropriate type
 	 */
-	this(Token token, ulong line, ulong col = 0, string tag = "") {
-		this.token = token;
+	this(TokenType type, ulong line, ulong col, ...) {
+		this.type = type;
 		this.line = line;
 		this.col = col;
-		this.tag = tag;
+		
+		assert(_arguments.length <= 1);
+		
+		foreach (arg; _arguments) {
+			if (arg == typeid(int)) {
+				tagInt = va_arg!(int)(_argptr);
+			} else if (arg == typeid(uint)) {
+				tagUInt = va_arg!(uint)(_argptr);
+			} else if (arg == typeid(long)) {
+				tagLong = va_arg!(long)(_argptr);
+			} else if (arg == typeid(ulong)) {
+				tagULong = va_arg!(ulong)(_argptr);
+			} else if (arg == typeid(float)) {
+				tagFlt = va_arg!(float)(_argptr);
+			} else if (arg == typeid(double)) {
+				tagDbl = va_arg!(double)(_argptr);
+			} else if (arg == typeid(string)) {
+				tagStr = va_arg!(string)(_argptr);
+			} else {
+				assert(0);
+			}
+		}
 	}
 }
 
@@ -80,7 +116,7 @@ enum LexState : ubyte {
  * Contains the lexer's state and the list of processed tokens.
  */
 struct LexContext {
-	DList!TokenTag tokens;
+	DList!Token tokens;
 	LexState state;
 	ulong line, col;
 	
@@ -117,8 +153,8 @@ LexContext lexSource(string source) {
 	/*
 	 * Adds a token to the list in ctx with the current line and column.
 	 */
-	void addToken(Token token) {
-		ctx.tokens.insertBack(TokenTag(token, ctx.line, ctx.col));
+	void addToken(TokenType type) {
+		ctx.tokens.insertBack(Token(type, ctx.line, ctx.col));
 	}
 	
 	/**
@@ -171,23 +207,33 @@ LexContext lexSource(string source) {
 		}
 		
 		if (cur.length == 1 || !inPattern(cur[1], pattern)) {
-			Token token;
+			if (ctx.state == LexState.LITERAL_INT_D) {
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT, ctx.line,
+					startCol, to!int(buffer)));
+				
+				buffer.length = 0;
+				ctx.state = LexState.DEFAULT;
+			}
+			
+			/+ TokenType type;
 			
 			if (ctx.state == LexState.LITERAL_INT_O) {
-				token = Token.LITERAL_INT_O;
+				type = TokenType.LITERAL_INT_O;
 			} else if (ctx.state == LexState.LITERAL_INT_D) {
-				token = Token.LITERAL_INT_D;
+				type = TokenType.LITERAL_INT_D;
 			} else if (ctx.state == LexState.LITERAL_INT_H) {
-				token = Token.LITERAL_INT_H;
+				type = TokenType.LITERAL_INT_H;
 			} else {
 				assert(0);
 			}
 			
-			ctx.tokens.insertBack(TokenTag(token, ctx.line, startCol,
-				to!string(buffer)));
+			ctx.tokens.insertBack(Token(token, ctx.line, startCol,
+				/+to!string(buffer)+/));
 			
 			buffer.length = 0;
-			ctx.state = LexState.DEFAULT;
+			ctx.state = LexState.DEFAULT;+/
+			
+			
 		}
 		
 		/* TODO: implement suffixes, floats
@@ -211,8 +257,8 @@ LexContext lexSource(string source) {
 				}
 			}
 			
-			ctx.tokens.insertBack(TokenTag((isKeyword ? Token.KEYWORD :
-				Token.IDENTIFIER), ctx.line, startCol, identifier));
+			ctx.tokens.insertBack(Token((isKeyword ? TokenType.KEYWORD :
+				TokenType.IDENTIFIER), ctx.line, startCol, identifier));
 			
 			buffer.length = 0;
 			ctx.state = LexState.DEFAULT;
@@ -247,70 +293,73 @@ LexContext lexSource(string source) {
 		}
 	}
 	
+	/* TODO: sort these if/elseif/else chains in order of likelihood, once all
+	 * cases have been added */
+	
 	while (cur.length > 0) {
 		/* based on the current state, read a token and/or change the state */
 		if (ctx.state == LexState.DEFAULT) {
 			if (atNewLine()) {
 				handleNewLine();
 			} else if (cur[0] == '.') {
-				addToken(Token.DOT);
+				addToken(TokenType.DOT);
 			} else if (cur[0] == '-') {
 				if (cur.length >= 2 && cur[1] == '>') {
-					addToken(Token.ARROW);
+					addToken(TokenType.ARROW);
 					advance();
 				}
 			} else if (cur[0] == '~') {
-				addToken(Token.NOT);
+				addToken(TokenType.NOT);
 			} else if (cur[0] == '!') {
 				if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.NOT_EQUAL);
+					addToken(TokenType.NOT_EQUAL);
 					advance();
 				} else {
-					addToken(Token.BANG);
+					addToken(TokenType.BANG);
 				}
 			} else if (cur[0] == '=') {
 				if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.EQUAL);
+					addToken(TokenType.EQUAL);
 					advance();
 				} else {
-					addToken(Token.ASSIGN);
+					addToken(TokenType.ASSIGN);
 				}
 			} else if (cur[0] == '^') {
-				addToken(Token.XOR);
+				addToken(TokenType.XOR);
 			} else if (cur[0] == '&') {
 				if (cur.length >= 2 && cur[1] == '&') {
-					addToken(Token.SS_AND);
+					addToken(TokenType.SS_AND);
 					advance();
 				} else {
-					addToken(Token.AND);
+					addToken(TokenType.AND);
 				}
 			} else if (cur[0] == '|') {
 				if (cur.length >= 2 && cur[1] == '|') {
-					addToken(Token.SS_OR);
+					addToken(TokenType.SS_OR);
 					advance();
 				} else {
-					addToken(Token.OR);
+					addToken(TokenType.OR);
 				}
 			} else if (cur[0] == '+') {
 				if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.ASSIGN_ADD);
+					addToken(TokenType.ASSIGN_ADD);
 					advance();
 				} else {
-					addToken(Token.ADD);
+					addToken(TokenType.ADD);
 				}
 			} else if (cur[0] == '-') {
 				if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.ASSIGN_SUBTRACT);
+					addToken(TokenType.ASSIGN_SUBTRACT);
 					advance();
 				} else {
-					addToken(Token.SUBTRACT);
+					addToken(TokenType.SUBTRACT);
 				}
 			} else if (cur[0] == '*') {
 				if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.ASSIGN_MULTIPLY);
+					addToken(TokenType.ASSIGN_MULTIPLY);
 					advance();
 				} else {
-					addToken(Token.MULTIPLY);
+					addToken(TokenType.MULTIPLY);
 				}
 			} else if (cur[0] == '/') {
 				if (cur.length >= 2 && cur[1] == '/') {
@@ -320,34 +369,48 @@ LexContext lexSource(string source) {
 					advance();
 					ctx.state = LexState.COMMENT_BLOCK;
 				} else if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.ASSIGN_DIVIDE);
+					addToken(TokenType.ASSIGN_DIVIDE);
 					advance();
 				} else {
-					addToken(Token.DIVIDE);
+					addToken(TokenType.DIVIDE);
 				}
 			} else if (cur[0] == '%') {
 				if (cur.length >= 2 && cur[1] == '=') {
-					addToken(Token.ASSIGN_MODULO);
+					addToken(TokenType.ASSIGN_MODULO);
 					advance();
 				} else {
-					addToken(Token.MODULO);
+					addToken(TokenType.MODULO);
 				}
 			} else if (cur[0] == ';') {
-				addToken(Token.SEMICOLON);
+				addToken(TokenType.SEMICOLON);
 			} else if (cur[0] == ',') {
-				addToken(Token.COMMA);
+				addToken(TokenType.COMMA);
 			} else if (cur[0] == '{') {
-				addToken(Token.BRACE_OPEN);
+				addToken(TokenType.BRACE_OPEN);
 			} else if (cur[0] == '}') {
-				addToken(Token.BRACE_CLOSE);
+				addToken(TokenType.BRACE_CLOSE);
 			} else if (cur[0] == '(') {
-				addToken(Token.PAREN_OPEN);
+				addToken(TokenType.PAREN_OPEN);
 			} else if (cur[0] == ')') {
-				addToken(Token.PAREN_CLOSE);
+				addToken(TokenType.PAREN_CLOSE);
 			} else if (cur[0] == '[') {
-				addToken(Token.BRACKET_OPEN);
+				addToken(TokenType.BRACKET_OPEN);
 			} else if (cur[0] == ']') {
-				addToken(Token.BRACKET_CLOSE);
+				addToken(TokenType.BRACKET_CLOSE);
+			} else if (cur[0] == '<') {
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(TokenType.LESS_EQUAL);
+					advance();
+				} else {
+					addToken(TokenType.LESS);
+				}
+			} else if (cur[0] == '>') {
+				if (cur.length >= 2 && cur[1] == '=') {
+					addToken(TokenType.GREATER_EQUAL);
+					advance();
+				} else {
+					addToken(TokenType.GREATER);
+				}
 			} else if (cur[0] == '"') {
 				startCol = ctx.col;
 				ctx.state = LexState.LITERAL_STR;
@@ -414,7 +477,7 @@ LexContext lexSource(string source) {
 					exit(1);
 				}
 			} else if (ctx.state == LexState.LITERAL_STR && cur[0] == '"') {
-				ctx.tokens.insertBack(TokenTag(Token.LITERAL_STR, ctx.line,
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_STR, ctx.line,
 					ctx.col, to!string(buffer)));
 				
 				buffer.length = 0;
@@ -430,7 +493,7 @@ LexContext lexSource(string source) {
 					exit(1);
 				}
 				
-				ctx.tokens.insertBack(TokenTag(Token.LITERAL_CHAR, ctx.line,
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_CHAR, ctx.line,
 					ctx.col, to!string(buffer)));
 				
 				buffer.length = 0;
@@ -460,7 +523,7 @@ LexContext lexSource(string source) {
 		advance();
 	}
 	
-	ctx.tokens.insertBack(TokenTag(Token.EOF, ctx.line));
+	ctx.tokens.insertBack(Token(TokenType.EOF, ctx.line, 0));
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
@@ -474,9 +537,40 @@ LexContext lexSource(string source) {
 	}
 	
 	write("[lex] tokens:\n");
-	foreach (t; ctx.tokens) {
-		writef("line%4d  col %2d:  %s%s\n", t.line, t.col, t.token,
-			(t.tag != "" ? (" [" ~ t.tag ~ "]") : ""));
+	foreach (token; ctx.tokens) {
+		string tag;
+		
+		switch (token.type) {
+		case TokenType.LITERAL_STR:
+		case TokenType.LITERAL_CHAR:
+		case TokenType.IDENTIFIER:
+		case TokenType.KEYWORD:
+			tag = " [%s]".format(token.tagStr);
+			break;
+		case TokenType.LITERAL_INT:
+			tag = " [%d]".format(token.tagInt);
+			break;
+		case TokenType.LITERAL_UINT:
+			tag = " [%u]".format(token.tagUInt);
+			break;
+		case TokenType.LITERAL_LONG:
+			tag = " [%ld]".format(token.tagLong);
+			break;
+		case TokenType.LITERAL_ULONG:
+			tag = " [%lu]".format(token.tagULong);
+			break;
+		case TokenType.LITERAL_FLOAT:
+			tag = " [%f]".format(token.tagFlt);
+			break;
+		case TokenType.LITERAL_DOUBLE:
+			tag = " [%f]".format(token.tagDbl);
+			break;
+		default:
+			tag = "";
+		}
+		
+		writef("line%4d  col %2d:  %s%s\n",
+			token.line, token.col, token.type, tag);
 	}
 	
 	return ctx;
