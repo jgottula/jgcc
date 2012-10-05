@@ -29,7 +29,8 @@ const string[] keywords = [
  */
 enum Token : ushort {
 	IDENTIFIER, KEYWORD,
-	LITERAL_STR, LITERAL_CHAR, LITERAL_INT, LITERAL_FLOAT,
+	LITERAL_INT_O, LITERAL_INT_D, LITERAL_INT_H,
+	LITERAL_STR, LITERAL_CHAR, LITERAL_FLOAT,
 	SEMICOLON,
 	COMMA,
 	DOT, ARROW,
@@ -166,14 +167,41 @@ LexContext lexSource(string source) {
 	 * token.
 	 */
 	void finishInteger() {
-		string decPattern = "0-9";
-		string octPattern = "0-7";
-		string hexPattern = "0-9A-Fa-f";
+		string pattern;
 		
-		// check ctx.state to determine if we are dec, oct, or hex
+		if (ctx.state == LexState.LITERAL_INT_O) {
+			pattern = "0-7";
+		} else if (ctx.state == LexState.LITERAL_INT_D) {
+			pattern = "0-9";
+		} else if (ctx.state == LexState.LITERAL_INT_H) {
+			pattern = "0-9A-Fa-f";
+		} else {
+			assert(0);
+		}
 		
-		// if we are in dec mode and we run across a '.', switch the mode to
-		// float mode and call finishFloat
+		if (cur.length == 1 || !inPattern(cur[1], pattern)) {
+			Token token;
+			
+			if (ctx.state == LexState.LITERAL_INT_O) {
+				token = Token.LITERAL_INT_O;
+			} else if (ctx.state == LexState.LITERAL_INT_D) {
+				token = Token.LITERAL_INT_D;
+			} else if (ctx.state == LexState.LITERAL_INT_H) {
+				token = Token.LITERAL_INT_H;
+			} else {
+				assert(0);
+			}
+			
+			ctx.tokens.insertBack(TokenTag(token, ctx.line, startCol,
+				to!string(buffer)));
+			
+			buffer.length = 0;
+			ctx.state = LexState.DEFAULT;
+		}
+		
+		/* TODO: implement suffixes, floats
+		 * for floats, if we are in base 10 int mode and come across a '.', then
+		 * switch the mode to float and immediately call finishFloat */
 	}
 	
 	/**
