@@ -1,8 +1,8 @@
-/++
- + Authors: Justin Gottula
- + Date:    October 2012
- + License: Simplified BSD license
- +/
+/**
+ * Authors: Justin Gottula
+ * Date:    October 2012
+ * License: Simplified BSD license
+ */
 module lex;
 
 import std.ascii;
@@ -13,9 +13,9 @@ import std.stdio;
 import std.string;
 
 
-/++
- + String table of reserved keywords
- +/
+/**
+ * String table of reserved keywords
+ */
 const string[] keywords = [
 	"auto", "break", "case", "char", "const", "continue", "default", "do",
 	"double", "else", "enum", "extern", "float", "for", "goto", "if", "int",
@@ -24,9 +24,9 @@ const string[] keywords = [
 	"while"
 ];
 
-/++
- + Represents an individual token.
- +/
+/**
+ * Represents an individual token.
+ */
 enum Token : ushort {
 	IDENTIFIER, KEYWORD,
 	LITERAL_STR, LITERAL_CHAR, LITERAL_INT, LITERAL_FLOAT,
@@ -44,17 +44,17 @@ enum Token : ushort {
 	EOF,
 }
 
-/++
- + Combines a Token enum with a string tag (for identifiers, keywords, etc.).
- +/
+/**
+ * Combines a Token enum with a string tag (for identifiers, keywords, etc.).
+ */
 struct TokenTag {
 	Token token;
 	ulong line, col;
 	string tag;
 	
-	/++
-	 + Initializes the class with token and line, optionally col, and no tag.
-	 +/
+	/**
+	 * Initializes the class with token and line, optionally col, and no tag.
+	 */
 	this(Token token, ulong line, ulong col = 0) {
 		this.token = token;
 		this.line = line;
@@ -62,9 +62,9 @@ struct TokenTag {
 	}
 }
 
-/++
- + Represents the current state of the lexer.
- +/
+/**
+ * Represents the current state of the lexer.
+ */
 enum LexState : ushort {
 	DEFAULT,
 	COMMENT_BLOCK, COMMENT_LINE,
@@ -73,9 +73,9 @@ enum LexState : ushort {
 	LITERAL_INT_D, LITERAL_INT_O, LITERAL_INT_H, LITERAL_FLOAT,
 }
 
-/++
- + Contains the lexer's state and the list of processed tokens.
- +/
+/**
+ * Contains the lexer's state and the list of processed tokens.
+ */
 struct LexContext {
 	DList!TokenTag tokens;
 	LexState state;
@@ -96,10 +96,10 @@ struct LexContext {
 	}
 }
 
-/++
- + Indicates that the lexer has attempted to read or advance past the end of the
- + file.
- +/
+/**
+ * Indicates that the lexer has attempted to read or advance past the end of the
+ * file.
+ */
 class LexOverrunException : Exception {
 	this() {
 		super("");
@@ -107,45 +107,45 @@ class LexOverrunException : Exception {
 }
 
 
-/++
- + Lexes the contents of inputFile.
- + 
- + Params:
- + source =
- +  a string containing the source code to be lexed
- + Returns: a LexContext struct containing the list of tokens found in the file
- +/
+/**
+ * Lexes the contents of inputFile.
+ * 
+ * Params:
+ * source =
+ *  a string containing the source code to be lexed
+ * Returns: a LexContext struct containing the list of tokens found in the file
+ */
 LexContext lexSource(string source) {
 	auto ctx = LexContext(1, 1);
 	string cur = source;
 	char[] buffer = new char[0];
 	ulong startCol = 0;
 	
-	/+
-	 + Adds a token to the list in ctx with the current line and column.
-	 +/
+	/*
+	 * Adds a token to the list in ctx with the current line and column.
+	 */
 	void addToken(Token token) {
 		ctx.tokens.insertBack(TokenTag(token, ctx.line, ctx.col));
 	}
 	
-	/++
-	 + Advances the cursor by the requested number of places.
-	 +/
+	/**
+	 * Advances the cursor by the requested number of places.
+	 */
 	void advance(ulong count = 1) {
 		cur = cur[count..$];
 		ctx.col += count;
 	}
 	
-	/+
-	 + Checks whether the cursor is at a newline.
-	 +/
+	/*
+	 * Checks whether the cursor is at a newline.
+	 */
 	bool atNewLine() {
 		return (cur[0] == '\n' || cur[0] == '\r');
 	}
 	
-	/++
-	 + Handles weird line endings and adjusts the context for newlines.
-	 +/
+	/**
+	 * Handles weird line endings and adjusts the context for newlines.
+	 */
 	void handleNewLine() {
 		/* deal with \r\n and \n\r line endings */
 		if (cur.length > 1) {
@@ -160,10 +160,10 @@ LexContext lexSource(string source) {
 		ctx.col = 0;
 	}
 	
-	/+
-	 + Checks if an integer literal has been completed and, if so, adds it as a
-	 + token.
-	 +/
+	/*
+	 * Checks if an integer literal has been completed and, if so, adds it as a
+	 * token.
+	 */
 	void finishInteger() {
 		string decPattern = "0-9";
 		string octPattern = "0-7";
@@ -175,10 +175,10 @@ LexContext lexSource(string source) {
 		// float mode and call finishFloat
 	}
 	
-	/++
-	 + Checks if an identifier has been completed and, if so, adds it as a
-	 + token.
-	 +/
+	/**
+	 * Checks if an identifier has been completed and, if so, adds it as a
+	 * token.
+	 */
 	void finishIdentifier() {
 		if (cur.length == 1 || !inPattern(cur[1], "A-Za-z0-9_")) {
 			string identifier = to!string(buffer);
@@ -201,9 +201,9 @@ LexContext lexSource(string source) {
 		}
 	}
 	
-	/+
-	 + Appends the _escape sequence represented by escape to the buffer.
-	 +/
+	/*
+	 * Appends the _escape sequence represented by escape to the buffer.
+	 */
 	void appendEscapeChar(in char escape) {
 		/* TODO: implement hex/octal escape sequences */
 		

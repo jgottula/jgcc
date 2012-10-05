@@ -1,8 +1,8 @@
-/++
- + Authors: Justin Gottula
- + Date:    October 2012
- + License: Simplified BSD license
- +/
+/**
+ * Authors: Justin Gottula
+ * Date:    October 2012
+ * License: Simplified BSD license
+ */
 module input;
 
 import std.c.stdlib;
@@ -12,16 +12,16 @@ import std.file;
 import std.stdio;
 
 
-/++
- + Determines whether inputPath is valid, opens the file, and reads its contents
- + into memory
- + 
- + Params:
- + inputPath =
- +  the file path of the source file to be opened
- + fileContents =
- +  a string which will contain the full contents of the file
- +/
+/**
+ * Determines whether inputPath is valid, opens the file, and reads its contents
+ * into memory
+ * 
+ * Params:
+ * inputPath =
+ *  the file path of the source file to be opened
+ * fileContents =
+ *  a string which will contain the full contents of the file
+ */
 void readSource(in string inputPath, out string fileContents) {
 	if (inputPath.length < 3 || inputPath[$-2..$] != ".c") {
 		stderr.write("[input] expected a file ending in '.c'\n");
