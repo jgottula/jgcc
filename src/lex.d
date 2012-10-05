@@ -39,7 +39,8 @@ enum Token : ushort {
 	ADD, SUBTRACT, MULTIPLY, DIVIDE, MODULO,
 	NOT, AND, OR, XOR,
 	BANG, SS_AND, SS_OR,
-	ASSIGN, ASSIGN_ADD, ASSIGN_SUBTRACT, ASSIGN_MULTIPLY, ASSIGN_DIVIDE,
+	ASSIGN,
+	ASSIGN_ADD, ASSIGN_SUBTRACT, ASSIGN_MULTIPLY, ASSIGN_DIVIDE, ASSIGN_MODULO,
 	EOF,
 }
 
@@ -120,8 +121,15 @@ LexContext lexSource(string source) {
 	char[] buffer = new char[0];
 	ulong startCol = 0;
 	
+	/+
+	 + Adds a token to the list in ctx with the current line and column.
+	 +/
+	void addToken(Token token) {
+		ctx.tokens.insertBack(TokenTag(token, ctx.line, ctx.col));
+	}
+	
 	/++
-	 + Advances the cursor by the requested number of places
+	 + Advances the cursor by the requested number of places.
 	 +/
 	void advance(ulong count = 1) {
 		cur = cur[count..$];
@@ -231,50 +239,38 @@ LexContext lexSource(string source) {
 			if (atNewLine()) {
 				handleNewLine();
 			} else if (cur[0] == '.') {
-				ctx.tokens.insertBack(TokenTag(Token.DOT,
-					ctx.line, ctx.col));
+				addToken(Token.DOT);
 			} else if (cur[0] == '-') {
 				if (cur.length >= 2 && cur[1] == '>') {
-					ctx.tokens.insertBack(TokenTag(Token.ARROW,
-						ctx.line, ctx.col));
+					addToken(Token.ARROW);
 					advance();
 				}
 			} else if (cur[0] == '~') {
-				ctx.tokens.insertBack(TokenTag(Token.NOT,
-					ctx.line, ctx.col));
+				addToken(Token.NOT);
 			} else if (cur[0] == '!') {
-				ctx.tokens.insertBack(TokenTag(Token.BANG,
-					ctx.line, ctx.col));
+				addToken(Token.BANG);
 			} else if (cur[0] == '^') {
-				ctx.tokens.insertBack(TokenTag(Token.XOR,
-					ctx.line, ctx.col));
+				addToken(Token.XOR);
 			} else if (cur[0] == '&') {
 				if (cur.length >= 2 && cur[1] == '&') {
-					ctx.tokens.insertBack(TokenTag(Token.SS_AND,
-						ctx.line, ctx.col));
+					addToken(Token.SS_AND);
 					advance();
 				} else {
-					ctx.tokens.insertBack(TokenTag(Token.AND,
-						ctx.line, ctx.col));
+					addToken(Token.AND);
 				}
 			} else if (cur[0] == '|') {
 				if (cur.length >= 2 && cur[1] == '|') {
-					ctx.tokens.insertBack(TokenTag(Token.SS_OR,
-						ctx.line, ctx.col));
+					addToken(Token.SS_OR);
 					advance();
 				} else {
-					ctx.tokens.insertBack(TokenTag(Token.OR,
-						ctx.line, ctx.col));
+					addToken(Token.OR);
 				}
 			} else if (cur[0] == '+') {
-				ctx.tokens.insertBack(TokenTag(Token.ADD,
-					ctx.line, ctx.col));
+				addToken(Token.ADD);
 			} else if (cur[0] == '-') {
-				ctx.tokens.insertBack(TokenTag(Token.SUBTRACT,
-					ctx.line, ctx.col));
+				addToken(Token.SUBTRACT);
 			} else if (cur[0] == '*') {
-				ctx.tokens.insertBack(TokenTag(Token.MULTIPLY,
-					ctx.line, ctx.col));
+				addToken(Token.MULTIPLY);
 			} else if (cur[0] == '/') {
 				if (cur.length >= 2 && cur[1] == '/') {
 					advance();
@@ -283,33 +279,26 @@ LexContext lexSource(string source) {
 					advance();
 					ctx.state = LexState.COMMENT_BLOCK;
 				} else {
-					ctx.tokens.insertBack(TokenTag(Token.DIVIDE,
-						ctx.line, ctx.col));
+					addToken(Token.DIVIDE);
 				}
+			} else if (cur[0] == '%') {
+				addToken(Token.MODULO);
 			} else if (cur[0] == ';') {
-				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON,
-					ctx.line, ctx.col));
+				addToken(Token.SEMICOLON);
 			} else if (cur[0] == ',') {
-				ctx.tokens.insertBack(TokenTag(Token.COMMA,
-					ctx.line, ctx.col));
+				addToken(Token.COMMA);
 			} else if (cur[0] == '{') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN,
-					ctx.line, ctx.col));
+				addToken(Token.BRACE_OPEN);
 			} else if (cur[0] == '}') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACE_CLOSE,
-					ctx.line, ctx.col));
+				addToken(Token.BRACE_CLOSE);
 			} else if (cur[0] == '(') {
-				ctx.tokens.insertBack(TokenTag(Token.PAREN_OPEN,
-					ctx.line, ctx.col));
+				addToken(Token.PAREN_OPEN);
 			} else if (cur[0] == ')') {
-				ctx.tokens.insertBack(TokenTag(Token.PAREN_CLOSE,
-					ctx.line, ctx.col));
+				addToken(Token.PAREN_CLOSE);
 			} else if (cur[0] == '[') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACKET_OPEN,
-					ctx.line, ctx.col));
+				addToken(Token.BRACKET_OPEN);
 			} else if (cur[0] == ']') {
-				ctx.tokens.insertBack(TokenTag(Token.BRACKET_CLOSE,
-					ctx.line, ctx.col));
+				addToken(Token.BRACKET_CLOSE);
 			} else if (cur[0] == '"') {
 				startCol = ctx.col;
 				ctx.state = LexState.LITERAL_STR;
