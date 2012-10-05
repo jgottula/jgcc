@@ -9,9 +9,9 @@ PROJNAME:=jgcc
 LIBS:=
 
 # -funittest is exceptionally slow
-DFLAGS:=-Wall -O1 -ggdb3
+DFLAGS:=-Wall -O1 -ggdb3 -pipe
 DOCFLAGS:=-O0 -fdoc
-LINKFLAGS:=-fwhole-program -fuse-linker-plugin $(LIBS)
+LINKFLAGS:=-fwhole-program -fuse-linker-plugin -pipe $(LIBS)
 
 OUT_EXE:=$(PROJNAME)
 
