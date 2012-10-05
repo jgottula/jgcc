@@ -55,10 +55,11 @@ struct TokenTag {
 	/**
 	 * Initializes the class with token and line, optionally col, and no tag.
 	 */
-	this(Token token, ulong line, ulong col = 0) {
+	this(Token token, ulong line, ulong col = 0, string tag = "") {
 		this.token = token;
 		this.line = line;
 		this.col = col;
+		this.tag = tag;
 	}
 }
 
@@ -191,10 +192,8 @@ LexContext lexSource(string source) {
 				}
 			}
 			
-			auto token = TokenTag((isKeyword ? Token.KEYWORD :
-				Token.IDENTIFIER), ctx.line, startCol);
-			token.tag = identifier;
-			ctx.tokens.insertBack(token);
+			ctx.tokens.insertBack(TokenTag((isKeyword ? Token.KEYWORD :
+				Token.IDENTIFIER), ctx.line, startCol, identifier));
 			
 			buffer.length = 0;
 			ctx.state = LexState.DEFAULT;
@@ -388,9 +387,8 @@ LexContext lexSource(string source) {
 					exit(1);
 				}
 			} else if (ctx.state == LexState.LITERAL_STR && cur[0] == '"') {
-				auto token = TokenTag(Token.LITERAL_STR, ctx.line, startCol);
-				token.tag = to!string(buffer);
-				ctx.tokens.insertBack(token);
+				ctx.tokens.insertBack(TokenTag(Token.LITERAL_STR, ctx.line,
+					ctx.col, to!string(buffer)));
 				
 				buffer.length = 0;
 				ctx.state = LexState.DEFAULT;
@@ -405,9 +403,8 @@ LexContext lexSource(string source) {
 					exit(1);
 				}
 				
-				auto token = TokenTag(Token.LITERAL_CHAR, ctx.line, startCol);
-				token.tag = to!string(buffer[0]);
-				ctx.tokens.insertBack(token);
+				ctx.tokens.insertBack(TokenTag(Token.LITERAL_CHAR, ctx.line,
+					ctx.col, to!string(buffer)));
 				
 				buffer.length = 0;
 				ctx.state = LexState.DEFAULT;
