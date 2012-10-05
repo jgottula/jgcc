@@ -8,6 +8,7 @@ module main;
 import std.c.stdlib;
 import std.stdio;
 
+import cpp;
 import input;
 import lex;
 
@@ -21,7 +22,8 @@ void main(string[] args) {
 		exit(1);
 	}
 	
-	string source;
+	string source, cppSource;
 	readSource(args[1], source);
+	preProcess(source, cppSource);
 	LexContext lexCtx = lexSource(source);
 }
