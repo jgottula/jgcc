@@ -27,7 +27,7 @@ const string[] keywords = [
 /**
  * Represents an individual token.
  */
-enum Token : ushort {
+enum Token : ubyte {
 	IDENTIFIER, KEYWORD,
 	LITERAL_INT_O, LITERAL_INT_D, LITERAL_INT_H,
 	LITERAL_STR, LITERAL_CHAR, LITERAL_FLOAT,
@@ -68,7 +68,7 @@ struct TokenTag {
 /**
  * Represents the current state of the lexer.
  */
-enum LexState : ushort {
+enum LexState : ubyte {
 	DEFAULT,
 	COMMENT_BLOCK, COMMENT_LINE,
 	IDENTIFIER,
@@ -258,10 +258,6 @@ LexContext lexSource(string source) {
 	}
 	
 	while (cur.length > 0) {
-		/* NOTE! for multi-char tokens, peek ahead one character and, if it is
-		 * not part of the token (i.e., no longer [A-Z]|[a-z]|_) then revert the
-		 * state back to DEFAULT */
-		
 		/* based on the current state, read a token and/or change the state */
 		if (ctx.state == LexState.DEFAULT) {
 			if (atNewLine()) {
