@@ -11,7 +11,6 @@ LIBS:=
 DC:=ldc2
 DFLAGS:=-w -wi -O1 -g -d-debug -disable-inlining -output-o -unittest
 DOCFLAGS:=-O0 -D
-LINKFLAGS:=$(LIBS)
 
 OUT_EXE:=$(PROJNAME)
 
@@ -28,7 +27,7 @@ CLEAN=$(wildcard jgcc) $(wildcard *.o) $(wildcard ../doc/*.html)
 all: $(PROJNAME)
 
 $(PROJNAME): $(OBJECTS)
-	$(DC) $(LINKFLAGS) -of=$@ $^
+	$(DC) $(DFLAGS) $(LIBS) -of=$@ $^
 
 %.o: %.d Makefile
 	$(DC) $(DFLAGS) -Dd=../doc -c $<
