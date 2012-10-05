@@ -28,16 +28,15 @@ const string[] keywords = [
  + Represents an individual token.
  +/
 enum Token : ushort {
-	EOF           = 0,
-	IDENTIFIER    = 1,
-	KEYWORD       = 2,
-	LITERAL_STR   = 3,
-	LITERAL_CHAR  = 4,
-	LITERAL_INT   = 5,
-	LITERAL_FLOAT = 6,
-	SEMICOLON     = 7,
-	BRACE_OPEN    = 8,
-	BRACE_CLOSE   = 9,
+	IDENTIFIER, KEYWORD,
+	LITERAL_STR, LITERAL_CHAR, LITERAL_INT, LITERAL_FLOAT,
+	SEMICOLON,
+	COMMA,
+	ADDRESSOF, DEREFERENCE,
+	BRACE_OPEN, BRACE_CLOSE,
+	PAREN_OPEN, PAREN_CLOSE,
+	BRACKET_OPEN, BRACKET_CLOSE,
+	EOF,
 }
 
 /++
@@ -61,16 +60,11 @@ struct TokenTag {
  + Represents the current state of the lexer.
  +/
 enum LexState : ushort {
-	DEFAULT       = 0,
-	COMMENT_BLOCK = 1,
-	COMMENT_LINE  = 2,
-	IDENTIFIER    = 3,
-	LITERAL_STR   = 4,
-	LITERAL_CHAR  = 5,
-	LITERAL_INT_D = 6,
-	LITERAL_INT_O = 7,
-	LITERAL_INT_H = 8,
-	LITERAL_FLOAT = 9,
+	DEFAULT,
+	COMMENT_BLOCK, COMMENT_LINE,
+	IDENTIFIER,
+	LITERAL_STR, LITERAL_CHAR,
+	LITERAL_INT_D, LITERAL_INT_O, LITERAL_INT_H, LITERAL_FLOAT,
 }
 
 /++
@@ -319,10 +313,24 @@ LexContext doLex(File inputFile) {
 				}
 			} else if (c == ';') {
 				ctx.tokens.insertBack(TokenTag(Token.SEMICOLON, ctx.line));
+			} else if (c == ',') {
+				ctx.tokens.insertBack(TokenTag(Token.COMMA, ctx.line));
+			} else if (c == '&') {
+				ctx.tokens.insertBack(TokenTag(Token.ADDRESSOF, ctx.line));
+			} else if (c == '*') {
+				ctx.tokens.insertBack(TokenTag(Token.DEREFERENCE, ctx.line));
 			} else if (c == '{') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACE_OPEN, ctx.line));
 			} else if (c == '}') {
 				ctx.tokens.insertBack(TokenTag(Token.BRACE_CLOSE, ctx.line));
+			} else if (c == '(') {
+				ctx.tokens.insertBack(TokenTag(Token.PAREN_OPEN, ctx.line));
+			} else if (c == ')') {
+				ctx.tokens.insertBack(TokenTag(Token.PAREN_CLOSE, ctx.line));
+			} else if (c == '[') {
+				ctx.tokens.insertBack(TokenTag(Token.BRACKET_OPEN, ctx.line));
+			} else if (c == ']') {
+				ctx.tokens.insertBack(TokenTag(Token.BRACKET_CLOSE, ctx.line));
 			} else if (c == '"') {
 				ctx.state = LexState.LITERAL_STR;
 			} else if (c == '\'') {
@@ -449,8 +457,9 @@ LexContext doLex(File inputFile) {
 		exit(1);
 	}
 	
+	write("[lex] tokens:\n");
 	foreach (t; ctx.tokens) {
-		writef("token @%3d:  %s%s\n", t.line, t.token,
+		writef("line%4d:  %s%s\n", t.line, t.token,
 			(t.tag != "" ? (" [" ~ t.tag ~ "]") : ""));
 	}
 	
