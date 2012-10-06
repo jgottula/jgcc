@@ -201,100 +201,100 @@ LexContext lexSource(string source) {
 	}
 	
 	/*
-	 * Checks if an integer literal has been completed and, if so, adds it as a
-	 * token.
+	 * Determines if the current integer literal has reached its end.
 	 */
-	void finishInteger() {
+	bool integerDone() {
+		string[LexState] pattern = [
+			LexState.LITERAL_INT_O : "LlUu." ~ "0-7",
+			LexState.LITERAL_INT_D : "LlUu." ~ "0-9",
+			LexState.LITERAL_INT_H : "LlUu." ~ "0-9A-Fa-f",
+		];
+		
+		return (cur.length == 1 || !cur[1].inPattern(pattern[ctx.state]));
+	}
+	
+	/*
+	 * Adds a finished integer literal as a token.
+	 */
+	void finishInteger(TokenType type) {
 		uint[LexState] radix = [
 			LexState.LITERAL_INT_O : 8,
 			LexState.LITERAL_INT_D : 10,
 			LexState.LITERAL_INT_H : 16,
 		];
-		string[LexState] pattern = [
-			LexState.LITERAL_INT_O : "0-7",
-			LexState.LITERAL_INT_D : "0-9",
-			LexState.LITERAL_INT_H : "0-9A-Fa-f",
-		];
 		
-		if (cur.length == 1 || !cur[1].inPattern(pattern[ctx.state])) {
-			long literal;
-			
-			/* TODO: handle L/LL */
-			/* TODO: handle unsigned literals: U/u */
-			
-			/* condition under which literal is int: no L/LL suffix, and within
-			 * the 32-bit window: (0, 2^32-1) for unsigned, (-2^32, 2^32-1) for
-			 * signed; otherwise, default to long for literals */
-			
-			try {
+		long literal;
+		ulong uLiteral;
+		
+		/* condition under which literal is int: no L/LL suffix, and within
+		 * the 32-bit window: (0, 2^32-1) for unsigned, (-2^32, 2^32-1) for
+		 * signed; otherwise, default to long for literals */
+		
+		try {
+			if (type == TokenType.LITERAL_INT ||
+				type == TokenType.LITERAL_LONG) {
 				literal = parse!long(buffer, radix[ctx.state]);
-			} catch (ConvOverflowException e) {
-				stderr.writef("[lex|error|%u:%u] overflow in integer literal\n",
-					ctx.line, ctx.col);
-				exit(1);
-			}
-			
-			/* implicitly promote literals if they won't fit in an int */
-			if (/* no L && */literal >= int.min && literal <= int.max) {
-				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
-					ctx.line, startCol, cast(int)literal));
 			} else {
-				ctx.tokens.insertBack(Token(TokenType.LITERAL_LONG,
-					ctx.line, startCol, literal));
+				uLiteral = parse!ulong(buffer, radix[ctx.state]);
 			}
-			
-			
-			buffer.length = 0;
-			ctx.state = LexState.DEFAULT;
-			
-			/+ TokenType type;
-			
-			if (ctx.state == LexState.LITERAL_INT_O) {
-				type = TokenType.LITERAL_INT_O;
-			} else if (ctx.state == LexState.LITERAL_INT_D) {
-				type = TokenType.LITERAL_INT_D;
-			} else if (ctx.state == LexState.LITERAL_INT_H) {
-				type = TokenType.LITERAL_INT_H;
-			} else {
-				assert(0);
-			}
-			
-			ctx.tokens.insertBack(Token(token, ctx.line, startCol,
-				/+to!string(buffer)+/));
-			
-			buffer.length = 0;
-			ctx.state = LexState.DEFAULT;+/
-			
-			
+		} catch (ConvOverflowException e) {
+			stderr.writef("[lex|error|%u:%u] overflow in integer literal\n",
+				ctx.line, ctx.col);
+			exit(1);
 		}
 		
-		/* TODO: implement suffixes, floats
-		 * for floats, if we are in base 10 int mode and come across a '.', then
-		 * switch the mode to float and immediately call finishFloat */
+		/* promote int and uint literals to long/ulong if they exceed 32 bits */
+		if (type == TokenType.LITERAL_INT &&
+			(literal < int.min || literal > int.max)) {
+			type = TokenType.LITERAL_LONG;
+		} else if (type == TokenType.LITERAL_UINT && uLiteral > uint.max) {
+			type = TokenType.LITERAL_ULONG;
+		}
+		
+		if (type == TokenType.LITERAL_INT) {
+			ctx.tokens.insertBack(Token(type, ctx.line, startCol,
+				cast(int)literal));
+		} else if (type == TokenType.LITERAL_UINT) {
+			ctx.tokens.insertBack(Token(type, ctx.line, startCol,
+				cast(uint)uLiteral));
+		} else if (type == TokenType.LITERAL_LONG) {
+			ctx.tokens.insertBack(Token(type, ctx.line, startCol, literal));
+		} else if (type == TokenType.LITERAL_ULONG) {
+			ctx.tokens.insertBack(Token(type, ctx.line, startCol, uLiteral));
+		} else {
+			assert(0);
+		}
+		
+		buffer.length = 0;
+		ctx.state = LexState.DEFAULT;
 	}
 	
 	/**
-	 * Checks if an identifier has been completed and, if so, adds it as a
-	 * token.
+	 * Determines if the current identifier has reached its end.
+	 */
+	bool identifierDone() {
+		return (cur.length == 1 || !cur[1].inPattern("A-Za-z0-9_"));
+	}
+	
+	/**
+	 * Adds a finished identifier/keyword as a token.
 	 */
 	void finishIdentifier() {
-		if (cur.length == 1 || !cur[1].inPattern("A-Za-z0-9_")) {
-			string identifier = to!string(buffer);
-			bool isKeyword = false;
-			
-			foreach (keyword; keywords) {
-				if (identifier == keyword) {
-					isKeyword = true;
-					break;
-				}
+		string identifier = to!string(buffer);
+		bool isKeyword = false;
+		
+		foreach (keyword; keywords) {
+			if (identifier == keyword) {
+				isKeyword = true;
+				break;
 			}
-			
-			ctx.tokens.insertBack(Token((isKeyword ? TokenType.KEYWORD :
-				TokenType.IDENTIFIER), ctx.line, startCol, identifier));
-			
-			buffer.length = 0;
-			ctx.state = LexState.DEFAULT;
 		}
+		
+		ctx.tokens.insertBack(Token((isKeyword ? TokenType.KEYWORD :
+			TokenType.IDENTIFIER), ctx.line, startCol, identifier));
+		
+		buffer.length = 0;
+		ctx.state = LexState.DEFAULT;
 	}
 	
 	/*
@@ -384,6 +384,7 @@ LexContext lexSource(string source) {
 					addToken(TokenType.ADD);
 				}
 			} else if (cur[0] == '-') {
+				/* TODO: fix minus, unary minus, assign minus */
 				if (cur.length >= 2 && cur[1] == '=') {
 					addToken(TokenType.ASSIGN_SUBTRACT);
 					advance();
@@ -469,13 +470,18 @@ LexContext lexSource(string source) {
 					ctx.state = LexState.LITERAL_INT_D;
 				}
 				
-				finishInteger();
+				if (integerDone()) {
+					finishInteger(TokenType.LITERAL_INT);
+				}
 			} else if (cur[0].inPattern("A-Za-z_")) {
 				startCol = ctx.col;
 				buffer ~= cur[0];
-				finishIdentifier();
 				
 				ctx.state = LexState.IDENTIFIER;
+				
+				if (identifierDone()) {
+					finishIdentifier();
+				}
 			} else if (cur[0] == ' ' || cur[0] == '\t') {
 				/* ignore whitespace */
 			} else {
@@ -548,13 +554,72 @@ LexContext lexSource(string source) {
 		} else if (ctx.state == LexState.LITERAL_INT_D ||
 			ctx.state == LexState.LITERAL_INT_O ||
 			ctx.state == LexState.LITERAL_INT_H) {
-			buffer ~= cur[0];
+			/* LIT_INT: (no [.lu] yet)
+			 *   \d    OK (radix-dependent)
+			 *   f     INVALID
+			 *   l     DONE <long>
+			 *   u     DONE <uint>
+			 *   lu|ul DONE <ulong>
+			 *   ll|uu INVALID (long long disallowed)
+			 *   .     LIT_FLOAT (radix-dependent)
+			 * 
+			 * LIT_FLOAT: (after .)
+			 *   [0-9] OK
+			 *   .     INVALID
+			 *   e     LIT_FLOAT_EXP
+			 *   p     LIT_FLOAT_BINEXP
+			 *   f     DONE <float>
+			 * 
+			 * LIT_FLOAT_EXP: (after e)
+			 *   [0-9] OK
+			 *   -     OK (only if first char)
+			 *   .     INVALID
+			 *   f     DONE <float>
+			 *   l     DONE <long double>
+			 * 
+			 * LIT_FLOAT_BINEXP: (after p)
+			 *   same as LIT_FLOAT_EXP, but [2-9] are excluded
+			 * 
+			 * literal ends in state:	type:
+			 * LIT_INT					int
+			 * LIT_UINT					uint
+			 * LIT_LONG					long
+			 * LIT_FLOAT				double
+			 */
 			
-			finishInteger();
+			/* TODO: hex floats */
+			/* can a float literal begin with 0? */
+			
+			if (cur[0].inPattern("LlUu")) {
+				if (cur.length >= 2 && cur[1].inPattern("LlUu")) {
+					if (cur[0] != cur[1]) {
+						advance();
+						finishInteger(TokenType.LITERAL_ULONG);
+					} else {
+						stderr.writef("lex|error|%u:%u] invalid integer " ~
+							"literal suffix\n", ctx.line, ctx.col);
+						exit(1);
+					}
+				}
+				else if (cur[0].toLower() == 'l') {
+					/* done, long */
+				} else if (cur[0].toLower() == 'u') {
+					/* done, uint */
+				}
+			} else if (cur[0].toLower() == 'f') {
+				/* ... */
+			} else {
+				buffer ~= cur[0];
+			}
+			
+			if (integerDone())
+				finishInteger(TokenType.LITERAL_INT);
 		} else if (ctx.state == LexState.IDENTIFIER) {
 			buffer ~= cur[0];
 			
-			finishIdentifier();
+			if (identifierDone()) {
+				finishIdentifier();
+			}
 		} else {
 			
 		}
