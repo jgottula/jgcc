@@ -572,10 +572,10 @@ LexContext lexSource(string source) {
 			tag = " [%u]".format(token.tagUInt);
 			break;
 		case TokenType.LITERAL_LONG:
-			tag = " [%ld]".format(token.tagLong);
+			tag = " [%d]".format(token.tagLong);
 			break;
 		case TokenType.LITERAL_ULONG:
-			tag = " [%lu]".format(token.tagULong);
+			tag = " [%u]".format(token.tagULong);
 			break;
 		case TokenType.LITERAL_FLOAT:
 			tag = " [%f]".format(token.tagFlt);
