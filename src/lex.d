@@ -194,32 +194,39 @@ LexContext lexSource(string source) {
 	 * token.
 	 */
 	void finishInteger() {
+		uint radix;
 		string pattern;
 		
 		if (ctx.state == LexState.LITERAL_INT_O) {
+			radix = 8;
 			pattern = "0-7";
 		} else if (ctx.state == LexState.LITERAL_INT_D) {
+			radix = 10;
 			pattern = "0-9";
 		} else if (ctx.state == LexState.LITERAL_INT_H) {
+			radix = 16;
 			pattern = "0-9A-Fa-f";
 		} else {
 			assert(0);
 		}
 		
 		if (cur.length == 1 || !inPattern(cur[1], pattern)) {
-			/* for now, we assume nothing has a suffix like L and can therefore
-			 * be treated as ints (and we can assume that no suffixes or other
-			 * garbage is in buffer so we can parse it easily) */
+			int tagInt;
 			
-			if (ctx.state == LexState.LITERAL_INT_O) {
-				int tag = parse!int(buffer, 8);
-				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
-					ctx.line, startCol, tag));
-			} else if (ctx.state == LexState.LITERAL_INT_D) {
-				int tag = parse!int(buffer, 10);
-				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
-					ctx.line, startCol, tag));
+			/* for now, we assume nothing has a suffix like L and can therefore
+			 * fit into an int (also, it lets us ignore suffixes when parsing
+			 * the contents of buffer) */
+			
+			try {
+				tagInt = parse!int(buffer, radix);
+			} catch (ConvOverflowException e) {
+				stderr.writef("[lex:%u] overflow in integer literal\n",
+					ctx.line);
+				exit(1);
 			}
+			
+			ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
+				ctx.line, startCol, tagInt));
 			
 			buffer.length = 0;
 			ctx.state = LexState.DEFAULT;
@@ -428,15 +435,17 @@ LexContext lexSource(string source) {
 				ctx.state = LexState.LITERAL_CHAR;
 			} else if (inPattern(cur[0], "0-9")) {
 				startCol = ctx.col;
-				buffer ~= cur[0];
 				
 				if (cur[0] == '0') {
 					if (cur.length >= 2 && toLower(cur[1]) == 'x') {
+						advance();
 						ctx.state = LexState.LITERAL_INT_H;
 					} else {
+						buffer ~= cur[0];
 						ctx.state = LexState.LITERAL_INT_O;
 					}
 				} else {
+					buffer ~= cur[0];
 					ctx.state = LexState.LITERAL_INT_D;
 				}
 				
