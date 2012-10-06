@@ -25,12 +25,12 @@ import std.string;
  */
 void readSource(in string inputPath, out string fileContents) {
 	if (inputPath.length < 3 || inputPath[$-2..$] != ".c") {
-		stderr.write("[input] expected a file ending in '.c'\n");
+		stderr.write("[input|error] expected a file ending in '.c'\n");
 		exit(1);
 	}
 	
 	if (!inputPath.exists()) {
-		stderr.writef("[input] the source file '%s' does not exist\n",
+		stderr.writef("[input|error] the source file '%s' does not exist\n",
 			inputPath);
 		exit(1);
 	}
@@ -41,7 +41,7 @@ void readSource(in string inputPath, out string fileContents) {
 		inputFile = File(inputPath, "r");
 	}
 	catch (ErrnoException e) {
-		stderr.writef("[input] encountered an IO error (errno = %d):\n%s\n",
+		stderr.writef("[input|error] encountered an IO error (errno = %d):\n%s\n",
 			e.errno, e.msg);
 		exit(1);
 	}

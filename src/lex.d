@@ -233,8 +233,8 @@ LexContext lexSource(string source) {
 			try {
 				literal = parse!long(buffer, radix);
 			} catch (ConvOverflowException e) {
-				stderr.writef("[lex:%u] overflow in integer literal\n",
-					ctx.line);
+				stderr.writef("[lex|error|%u:%u] overflow in integer literal\n",
+					ctx.line, ctx.col);
 				exit(1);
 			}
 			
@@ -323,8 +323,8 @@ LexContext lexSource(string source) {
 		} else if (escape == 'v') {
 			buffer ~= '\v';
 		} else {
-			stderr.writef("[lex:%u] unknown escape sequence: '\\%c'\n",
-				ctx.line, escape);
+			stderr.writef("[lex|error|%u:%u] unknown escape sequence: '\\%c'\n",
+				ctx.line, ctx.col, escape);
 			exit(1);
 		}
 	}
@@ -479,8 +479,9 @@ LexContext lexSource(string source) {
 			} else if (cur[0] == ' ' || cur[0] == '\t') {
 				/* ignore whitespace */
 			} else {
-				stderr.writef("[lex:%u] unexpected character: '%c'\n", ctx.line,
-					cur[0]);
+				stderr.writef("[lex|error|%u:%u] unexpected character: " ~
+					"'%c'\n", ctx.line, ctx.col, cur[0]);
+				stderr.write("TODO: make this error fatal\n");
 				//exit(1);
 			}
 		} else if (ctx.state == LexState.COMMENT_BLOCK) {
@@ -502,16 +503,16 @@ LexContext lexSource(string source) {
 			if (cur[0] == '\\') {
 				if (cur.length >= 2) {
 					if (cur[1] == '\n' || cur[1] == '\r') {
-						stderr.writef("[lex:%u] escape sequence interrupted " ~
-							"by newline\n", ctx.line);
+						stderr.writef("[lex|error|%u:%u] escape sequence " ~
+							"interrupted by newline\n", ctx.line, ctx.col);
 						exit(1);
 					} else {
 						appendEscapeChar(cur[1]);
 						advance();
 					}
 				} else {
-					stderr.writef("[lex:%u] found an incomplete escape " ~
-						"sequence\n", ctx.line);
+					stderr.writef("[lex|err|%u:%u] found an incomplete " ~
+						"escape sequence\n", ctx.line, ctx.col);
 					exit(1);
 				}
 			} else if (ctx.state == LexState.LITERAL_STR && cur[0] == '"') {
@@ -522,12 +523,12 @@ LexContext lexSource(string source) {
 				ctx.state = LexState.DEFAULT;
 			} else if (ctx.state == LexState.LITERAL_CHAR && cur[0] == '\'') {
 				if (buffer.length == 0) {
-					stderr.writef("[lex:%u] found an empty char literal\n",
-						ctx.line);
+					stderr.writef("[lex|error|%u:%u] found an empty char " ~
+						"literal\n", ctx.line, ctx.col);
 					exit(1);
 				} else if (buffer.length > 1) {
-					stderr.writef("[lex:%u] found a char literal with too " ~
-						"many chars\n", ctx.line);
+					stderr.writef("[lex|error|%u:%u] found a char literal " ~
+						"with too many chars\n", ctx.line, ctx.col);
 					exit(1);
 				}
 				
@@ -537,8 +538,8 @@ LexContext lexSource(string source) {
 				buffer.length = 0;
 				ctx.state = LexState.DEFAULT;
 			} else if (cur[0] == '\n' || cur[0] == '\r') {
-				stderr.writef("[lex:%u] encountered a newline within a " ~
-					"%s literal\n", ctx.line, (ctx.state ==
+				stderr.writef("[lex|error|%u:%u] encountered a newline " ~
+					"within a %s literal\n", ctx.line, ctx.col, (ctx.state ==
 					LexState.LITERAL_STR ? "string" : "char"));
 				exit(1);
 			} else {
@@ -565,12 +566,12 @@ LexContext lexSource(string source) {
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
-		stderr.writef("[lex:%u] encountered EOF while still in a comment " ~
-			"block\n", ctx.line);
+		stderr.writef("[lex|error|%u:%u] encountered EOF while still in a " ~
+			"comment block\n", ctx.line, ctx.col);
 		exit(1);
 	} else if (ctx.state == LexState.LITERAL_STR) {
-		stderr.writef("[lex:%u] encountered EOF while still in a string " ~
-			"literal\n", ctx.line);
+		stderr.writef("[lex|error|%u:%u] encountered EOF while still in a " ~
+			"string literal\n", ctx.line, ctx.col);
 		exit(1);
 	}
 	

@@ -18,7 +18,7 @@ void main(string[] args) {
 		"      (c) 2012 justin gottula\n\n");
 	
 	if (args.length != 2) {
-		stderr.write("[main] expected one argument: source file\n");
+		stderr.write("[main|error] expected one argument: source file\n");
 		exit(1);
 	}
 	
