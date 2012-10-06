@@ -205,23 +205,18 @@ LexContext lexSource(string source) {
 	 * token.
 	 */
 	void finishInteger() {
-		uint radix;
-		string pattern;
+		uint[LexState] radix = [
+			LexState.LITERAL_INT_O : 8,
+			LexState.LITERAL_INT_D : 10,
+			LexState.LITERAL_INT_H : 16,
+		];
+		string[LexState] pattern = [
+			LexState.LITERAL_INT_O : "0-7",
+			LexState.LITERAL_INT_D : "0-9",
+			LexState.LITERAL_INT_H : "0-9A-Fa-f",
+		];
 		
-		if (ctx.state == LexState.LITERAL_INT_O) {
-			radix = 8;
-			pattern = "0-7";
-		} else if (ctx.state == LexState.LITERAL_INT_D) {
-			radix = 10;
-			pattern = "0-9";
-		} else if (ctx.state == LexState.LITERAL_INT_H) {
-			radix = 16;
-			pattern = "0-9A-Fa-f";
-		} else {
-			assert(0);
-		}
-		
-		if (cur.length == 1 || !inPattern(cur[1], pattern)) {
+		if (cur.length == 1 || !inPattern(cur[1], pattern[ctx.state])) {
 			long literal;
 			
 			/* TODO: handle L/LL */
@@ -232,7 +227,7 @@ LexContext lexSource(string source) {
 			 * signed; otherwise, default to long for literals */
 			
 			try {
-				literal = parse!long(buffer, radix);
+				literal = parse!long(buffer, radix[ctx.state]);
 			} catch (ConvOverflowException e) {
 				stderr.writef("[lex|error|%u:%u] overflow in integer literal\n",
 					ctx.line, ctx.col);
