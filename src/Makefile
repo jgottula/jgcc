@@ -8,8 +8,8 @@
 PROJNAME:=jgcc
 LIBS:=
 
-DC:=ldc2
-DFLAGS:=-w -wi -O1 -g -d-debug -disable-inlining -output-o -unittest
+DC:=dmd
+DFLAGS:=-m64 -w -wi -g -debug -unittest
 
 OUT_EXE:=$(PROJNAME)
 
@@ -26,10 +26,10 @@ CLEAN=$(wildcard jgcc) $(wildcard *.o) $(wildcard ../doc/*.html)
 all: $(PROJNAME)
 
 $(PROJNAME): $(OBJECTS)
-	$(DC) $(DFLAGS) $(LIBS) -of=$@ $^
+	$(DC) $(DFLAGS) $(LIBS) -of$@ $^
 
 %.o: %.d Makefile
-	$(DC) $(DFLAGS) -Dd=../doc -c $<
+	$(DC) $(DFLAGS) -Dd../doc -c $<
 
 clean:
 	rm -f $(CLEAN)
