@@ -23,4 +23,9 @@ void main() {
 	
 	a = (b == c);
 	b = (c != d);
+	
+	a = (b < c);
+	b = (c > d);
+	c = (d <= e);
+	d = (e >= a);
 }
