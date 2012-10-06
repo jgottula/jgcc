@@ -580,7 +580,7 @@ LexContext lexSource(string source) {
 		exit(1);
 	}
 	
-	write("[lex] tokens:\n");
+	write("[lex|debug] tokens:\n");
 	foreach (token; ctx.tokens) {
 		string tag;
 		
@@ -620,7 +620,7 @@ LexContext lexSource(string source) {
 	auto finish = TickDuration.currSystemTick();
 	long duration = finish.msecs() - start.msecs();
 	if (duration >= 0) {
-		stderr.writef("[lex] took %d.%03d seconds\n",
+		stderr.writef("[lex|info] took %d.%03d seconds\n",
 			duration / 1000, duration % 1000);
 	} else {
 		stderr.write("[lex|warn] duration is negative?!\n");
