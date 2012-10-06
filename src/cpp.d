@@ -46,7 +46,7 @@ void preProcess(in string before, out string after) {
 	stderr.write("---------------------------------- CPP OUTPUT " ~
 		"----------------------------------\n");
 	foreach (ulong num, line; after.splitLines()) {
-		stderr.writef("%3d|%s\n", num, line);
+		stderr.writef("%3u|%s\n", num, line);
 	}
 	stderr.write("----------------------------------------------" ~
 		"----------------------------------\n");
