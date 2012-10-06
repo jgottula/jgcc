@@ -81,25 +81,25 @@ struct Token {
 		
 		foreach (arg; _arguments) {
 			if (arg == typeid(int)) {
-				tagInt = va_arg!(int)(_argptr);
+				tagInt = va_arg!int(_argptr);
 				assert(type == TokenType.LITERAL_INT);
 			} else if (arg == typeid(uint)) {
-				tagUInt = va_arg!(uint)(_argptr);
+				tagUInt = va_arg!uint(_argptr);
 				assert(type == TokenType.LITERAL_UINT);
 			} else if (arg == typeid(long)) {
-				tagLong = va_arg!(long)(_argptr);
+				tagLong = va_arg!long(_argptr);
 				assert(type == TokenType.LITERAL_LONG);
 			} else if (arg == typeid(ulong)) {
-				tagULong = va_arg!(ulong)(_argptr);
+				tagULong = va_arg!ulong(_argptr);
 				assert(type == TokenType.LITERAL_ULONG);
 			} else if (arg == typeid(float)) {
-				tagFlt = va_arg!(float)(_argptr);
+				tagFlt = va_arg!float(_argptr);
 				assert(type == TokenType.LITERAL_FLOAT);
 			} else if (arg == typeid(double)) {
-				tagDbl = va_arg!(double)(_argptr);
+				tagDbl = va_arg!double(_argptr);
 				assert(type == TokenType.LITERAL_DOUBLE);
 			} else if (arg == typeid(string)) {
-				tagStr = va_arg!(string)(_argptr);
+				tagStr = va_arg!string(_argptr);
 				assert(type == TokenType.LITERAL_STR ||
 					type == TokenType.LITERAL_CHAR ||
 					type == TokenType.IDENTIFIER ||
