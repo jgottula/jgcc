@@ -57,7 +57,7 @@ void readSource(in string inputPath, out string fileContents) {
 	stderr.write("--------------------------------- SOURCE DUMP " ~
 		"----------------------------------\n");
 	foreach (ulong num, line; fileContents.splitLines()) {
-		stderr.writef("%3d|%s\n", num, line);
+		stderr.writef("%3d|%s\n", num + 1, line);
 	}
 	stderr.write("----------------------------------------------" ~
 		"----------------------------------\n");
