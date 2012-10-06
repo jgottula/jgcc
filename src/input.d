@@ -10,7 +10,6 @@ import std.conv;
 import std.exception;
 import std.file;
 import std.stdio;
-import std.string;
 
 
 /**
@@ -53,12 +52,4 @@ void readSource(in string inputPath, out string fileContents) {
 	inputFile.rawRead(buffer);
 	
 	fileContents = to!string(buffer);
-	
-	stderr.write("--------------------------------- SOURCE DUMP " ~
-		"----------------------------------\n");
-	foreach (ulong num, line; fileContents.splitLines()) {
-		stderr.writef("%3d|%s\n", num + 1, line);
-	}
-	stderr.write("----------------------------------------------" ~
-		"----------------------------------\n");
 }

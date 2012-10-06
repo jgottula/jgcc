@@ -43,6 +43,11 @@ void preProcess(in string before, out string after) {
 	
 	after = to!string(buffer);
 	
+	stderr.write("--------------------------------- SOURCE DUMP " ~
+		"----------------------------------\n");
+	foreach (ulong num, line; before.splitLines()) {
+		stderr.writef("%3d|%s\n", num + 1, line);
+	}
 	stderr.write("---------------------------------- CPP OUTPUT " ~
 		"----------------------------------\n");
 	foreach (ulong num, line; after.splitLines()) {
