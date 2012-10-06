@@ -216,7 +216,7 @@ LexContext lexSource(string source) {
 			LexState.LITERAL_INT_H : "0-9A-Fa-f",
 		];
 		
-		if (cur.length == 1 || !inPattern(cur[1], pattern[ctx.state])) {
+		if (cur.length == 1 || !cur[1].inPattern(pattern[ctx.state])) {
 			long literal;
 			
 			/* TODO: handle L/LL */
@@ -278,7 +278,7 @@ LexContext lexSource(string source) {
 	 * token.
 	 */
 	void finishIdentifier() {
-		if (cur.length == 1 || !inPattern(cur[1], "A-Za-z0-9_")) {
+		if (cur.length == 1 || !cur[1].inPattern("A-Za-z0-9_")) {
 			string identifier = to!string(buffer);
 			bool isKeyword = false;
 			
@@ -453,7 +453,7 @@ LexContext lexSource(string source) {
 			} else if (cur[0] == '\'') {
 				startCol = ctx.col;
 				ctx.state = LexState.LITERAL_CHAR;
-			} else if (inPattern(cur[0], "0-9")) {
+			} else if (cur[0].isDigit()) {
 				startCol = ctx.col;
 				
 				if (cur[0] == '0') {
@@ -470,7 +470,7 @@ LexContext lexSource(string source) {
 				}
 				
 				finishInteger();
-			} else if (inPattern(cur[0], "A-Za-z_")) {
+			} else if (cur[0].inPattern("A-Za-z_")) {
 				startCol = ctx.col;
 				buffer ~= cur[0];
 				finishIdentifier();
