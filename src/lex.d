@@ -625,9 +625,11 @@ LexContext lexSource(string source) {
 					}
 				}
 				else if (cur[0].toLower() == 'l') {
-					/* done, long */
+					finishInteger(TokenType.LITERAL_LONG);
+					goto done;
 				} else if (cur[0].toLower() == 'u') {
-					/* done, uint */
+					finishInteger(TokenType.LITERAL_UINT);
+					goto done;
 				}
 			} else if (cur[0].toLower() == 'f') {
 				/* ... */
