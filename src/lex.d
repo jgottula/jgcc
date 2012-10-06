@@ -207,13 +207,22 @@ LexContext lexSource(string source) {
 		}
 		
 		if (cur.length == 1 || !inPattern(cur[1], pattern)) {
-			if (ctx.state == LexState.LITERAL_INT_D) {
-				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT, ctx.line,
-					startCol, to!int(buffer)));
-				
-				buffer.length = 0;
-				ctx.state = LexState.DEFAULT;
+			/* for now, we assume nothing has a suffix like L and can therefore
+			 * be treated as ints (and we can assume that no suffixes or other
+			 * garbage is in buffer so we can parse it easily) */
+			
+			if (ctx.state == LexState.LITERAL_INT_O) {
+				int tag = parse!int(buffer, 8);
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
+					ctx.line, startCol, tag));
+			} else if (ctx.state == LexState.LITERAL_INT_D) {
+				int tag = parse!int(buffer, 10);
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
+					ctx.line, startCol, tag));
 			}
+			
+			buffer.length = 0;
+			ctx.state = LexState.DEFAULT;
 			
 			/+ TokenType type;
 			
