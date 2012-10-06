@@ -210,7 +210,11 @@ LexContext lexSource(string source) {
 			LexState.LITERAL_INT_H : "LlUu." ~ "0-9A-Fa-f",
 		];
 		
-		return (cur.length == 1 || !cur[1].inPattern(pattern[ctx.state]));
+		assert(ctx.state == LexState.LITERAL_INT_O ||
+			ctx.state == LexState.LITERAL_INT_D ||
+			ctx.state == LexState.LITERAL_INT_H);
+		
+		return (cur.length <= 1 || !cur[1].inPattern(pattern[ctx.state]));
 	}
 	
 	/*
@@ -225,6 +229,10 @@ LexContext lexSource(string source) {
 		
 		long literal;
 		ulong uLiteral;
+		
+		assert(ctx.state == LexState.LITERAL_INT_O ||
+			ctx.state == LexState.LITERAL_INT_D ||
+			ctx.state == LexState.LITERAL_INT_H);
 		
 		/* condition under which literal is int: no L/LL suffix, and within
 		 * the 32-bit window: (0, 2^32-1) for unsigned, (-2^32, 2^32-1) for
