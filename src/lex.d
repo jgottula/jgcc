@@ -120,7 +120,8 @@ enum LexState : ubyte {
 	COMMENT_BLOCK, COMMENT_LINE,
 	IDENTIFIER,
 	LITERAL_STR, LITERAL_CHAR,
-	LITERAL_INT_D, LITERAL_INT_O, LITERAL_INT_H, LITERAL_FLOAT,
+	LITERAL_INT_B, LITERAL_INT_O, LITERAL_INT_D, LITERAL_INT_H,
+	LITERAL_FLOAT, LITERAL_FLOAT_SUF,
 }
 
 /**
@@ -205,12 +206,14 @@ LexContext lexSource(string source) {
 	 */
 	bool integerDone() {
 		string[LexState] pattern = [
+			LexState.LITERAL_INT_B : "LlUu." ~ "01",
 			LexState.LITERAL_INT_O : "LlUu." ~ "0-7",
 			LexState.LITERAL_INT_D : "LlUu." ~ "0-9",
 			LexState.LITERAL_INT_H : "LlUu." ~ "0-9A-Fa-f",
 		];
 		
-		assert(ctx.state == LexState.LITERAL_INT_O ||
+		assert(ctx.state == LexState.LITERAL_INT_B ||
+			ctx.state == LexState.LITERAL_INT_O ||
 			ctx.state == LexState.LITERAL_INT_D ||
 			ctx.state == LexState.LITERAL_INT_H);
 		
@@ -222,6 +225,7 @@ LexContext lexSource(string source) {
 	 */
 	void finishInteger(TokenType type) {
 		uint[LexState] radix = [
+			LexState.LITERAL_INT_B : 2,
 			LexState.LITERAL_INT_O : 8,
 			LexState.LITERAL_INT_D : 10,
 			LexState.LITERAL_INT_H : 16,
@@ -230,7 +234,8 @@ LexContext lexSource(string source) {
 		long literal;
 		ulong uLiteral;
 		
-		assert(ctx.state == LexState.LITERAL_INT_O ||
+		assert(ctx.state == LexState.LITERAL_INT_B ||
+			ctx.state == LexState.LITERAL_INT_O ||
 			ctx.state == LexState.LITERAL_INT_D ||
 			ctx.state == LexState.LITERAL_INT_H);
 		
@@ -474,6 +479,9 @@ LexContext lexSource(string source) {
 					if (cur.length >= 2 && cur[1].toLower() == 'x') {
 						advance();
 						ctx.state = LexState.LITERAL_INT_H;
+					} else if (cur.length >= 2 && cur[1].toLower() == 'b') {
+						advance();
+						ctx.state = LexState.LITERAL_INT_B;
 					} else {
 						buffer ~= cur[0];
 						ctx.state = LexState.LITERAL_INT_O;
@@ -564,8 +572,9 @@ LexContext lexSource(string source) {
 			} else {
 				buffer ~= cur[0];
 			}
-		} else if (ctx.state == LexState.LITERAL_INT_D ||
+		} else if (ctx.state == LexState.LITERAL_INT_B ||
 			ctx.state == LexState.LITERAL_INT_O ||
+			ctx.state == LexState.LITERAL_INT_D ||
 			ctx.state == LexState.LITERAL_INT_H) {
 			/* LIT_INT: (no [.lu] yet)
 			 *   \d    OK (radix-dependent)
