@@ -27,7 +27,7 @@ const string[] keywords = [
 ];
 
 /**
- * Represents an individual token.
+ * Represents a token's type.
  */
 enum TokenType : ubyte {
 	IDENTIFIER, KEYWORD,
