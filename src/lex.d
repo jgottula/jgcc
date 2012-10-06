@@ -35,7 +35,7 @@ enum TokenType : ubyte {
 	LITERAL_FLOAT, LITERAL_DOUBLE,
 	LITERAL_STR, LITERAL_CHAR,
 	SEMICOLON,
-	COMMA,
+	COMMA, ELLIPSIS,
 	DOT, ARROW,
 	BRACE_OPEN, BRACE_CLOSE,
 	PAREN_OPEN, PAREN_CLOSE,
@@ -338,7 +338,12 @@ LexContext lexSource(string source) {
 			if (atNewLine()) {
 				handleNewLine();
 			} else if (cur[0] == '.') {
-				addToken(TokenType.DOT);
+				if (cur.length >= 3 && cur[1] == '.' && cur[2] == '.') {
+					addToken(TokenType.ELLIPSIS);
+					advance(2);
+				} else {
+					addToken(TokenType.DOT);
+				}
 			} else if (cur[0] == '-') {
 				if (cur.length >= 2 && cur[1] == '>') {
 					addToken(TokenType.ARROW);
