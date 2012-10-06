@@ -238,7 +238,7 @@ LexContext lexSource(string source) {
 				uLiteral = parse!ulong(buffer, radix[ctx.state]);
 			}
 		} catch (ConvOverflowException e) {
-			stderr.writef("[lex|error|%u:%u] overflow in integer literal\n",
+			stderr.writef("[lex|error|%d:%d] overflow in integer literal\n",
 				ctx.line, ctx.col);
 			exit(1);
 		}
@@ -321,7 +321,7 @@ LexContext lexSource(string source) {
 		} else if (escape == 'v') {
 			buffer ~= '\v';
 		} else {
-			stderr.writef("[lex|error|%u:%u] unknown escape sequence: '\\%c'\n",
+			stderr.writef("[lex|error|%d:%d] unknown escape sequence: '\\%c'\n",
 				ctx.line, ctx.col, escape);
 			exit(1);
 		}
@@ -490,7 +490,7 @@ LexContext lexSource(string source) {
 			} else if (cur[0] == ' ' || cur[0] == '\t') {
 				/* ignore whitespace */
 			} else {
-				stderr.writef("[lex|error|%u:%u] unexpected character: " ~
+				stderr.writef("[lex|error|%d:%d] unexpected character: " ~
 					"'%c'\n", ctx.line, ctx.col, cur[0]);
 				stderr.write("TODO: make this error fatal\n");
 				//exit(1);
@@ -514,7 +514,7 @@ LexContext lexSource(string source) {
 			if (cur[0] == '\\') {
 				if (cur.length >= 2) {
 					if (cur[1] == '\n' || cur[1] == '\r') {
-						stderr.writef("[lex|error|%u:%u] escape sequence " ~
+						stderr.writef("[lex|error|%d:%d] escape sequence " ~
 							"interrupted by newline\n", ctx.line, ctx.col);
 						exit(1);
 					} else {
@@ -522,7 +522,7 @@ LexContext lexSource(string source) {
 						advance();
 					}
 				} else {
-					stderr.writef("[lex|err|%u:%u] found an incomplete " ~
+					stderr.writef("[lex|err|%d:%d] found an incomplete " ~
 						"escape sequence\n", ctx.line, ctx.col);
 					exit(1);
 				}
@@ -534,11 +534,11 @@ LexContext lexSource(string source) {
 				ctx.state = LexState.DEFAULT;
 			} else if (ctx.state == LexState.LITERAL_CHAR && cur[0] == '\'') {
 				if (buffer.length == 0) {
-					stderr.writef("[lex|error|%u:%u] found an empty char " ~
+					stderr.writef("[lex|error|%d:%d] found an empty char " ~
 						"literal\n", ctx.line, ctx.col);
 					exit(1);
 				} else if (buffer.length > 1) {
-					stderr.writef("[lex|error|%u:%u] found a char literal " ~
+					stderr.writef("[lex|error|%d:%d] found a char literal " ~
 						"with too many chars\n", ctx.line, ctx.col);
 					exit(1);
 				}
@@ -549,7 +549,7 @@ LexContext lexSource(string source) {
 				buffer.length = 0;
 				ctx.state = LexState.DEFAULT;
 			} else if (cur[0] == '\n' || cur[0] == '\r') {
-				stderr.writef("[lex|error|%u:%u] encountered a newline " ~
+				stderr.writef("[lex|error|%d:%d] encountered a newline " ~
 					"within a %s literal\n", ctx.line, ctx.col, (ctx.state ==
 					LexState.LITERAL_STR ? "string" : "char"));
 				exit(1);
@@ -601,7 +601,7 @@ LexContext lexSource(string source) {
 						advance();
 						finishInteger(TokenType.LITERAL_ULONG);
 					} else {
-						stderr.writef("lex|error|%u:%u] invalid integer " ~
+						stderr.writef("lex|error|%d:%d] invalid integer " ~
 							"literal suffix\n", ctx.line, ctx.col);
 						exit(1);
 					}
@@ -636,11 +636,11 @@ LexContext lexSource(string source) {
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
 	if (ctx.state == LexState.COMMENT_BLOCK) {
-		stderr.writef("[lex|error|%u:%u] encountered EOF while still in a " ~
+		stderr.writef("[lex|error|%d:%d] encountered EOF while still in a " ~
 			"comment block\n", ctx.line, ctx.col);
 		exit(1);
 	} else if (ctx.state == LexState.LITERAL_STR) {
-		stderr.writef("[lex|error|%u:%u] encountered EOF while still in a " ~
+		stderr.writef("[lex|error|%d:%d] encountered EOF while still in a " ~
 			"string literal\n", ctx.line, ctx.col);
 		exit(1);
 	}
@@ -660,13 +660,13 @@ LexContext lexSource(string source) {
 			tag = " [%d]".format(token.tagInt);
 			break;
 		case TokenType.LITERAL_UINT:
-			tag = " [%u]".format(token.tagUInt);
+			tag = " [%d]".format(token.tagUInt);
 			break;
 		case TokenType.LITERAL_LONG:
 			tag = " [%d]".format(token.tagLong);
 			break;
 		case TokenType.LITERAL_ULONG:
-			tag = " [%u]".format(token.tagULong);
+			tag = " [%d]".format(token.tagULong);
 			break;
 		case TokenType.LITERAL_FLOAT:
 			tag = " [%f]".format(token.tagFlt);
