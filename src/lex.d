@@ -316,6 +316,8 @@ LexContext lexSource(string source) {
 			buffer ~= '\b';
 		} else if (escape == 'f') {
 			buffer ~= '\f';
+		} else if (escape == 'n') {
+			buffer ~= '\n';
 		} else if (escape == 'r') {
 			buffer ~= '\r';
 		} else if (escape == 't') {
