@@ -51,7 +51,7 @@ enum TokenType : ubyte {
 }
 
 /**
- * Combines a TokenType enum with a string tag (for identifiers, keywords, etc.).
+ * Combines a TokenType enum with a tag containing an identifier or literal.
  */
 struct Token {
 	TokenType type;
