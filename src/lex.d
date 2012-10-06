@@ -5,6 +5,7 @@
  */
 module lex;
 
+import core.time;
 import core.vararg;
 import std.ascii;
 import std.c.stdlib;
@@ -331,6 +332,8 @@ LexContext lexSource(string source) {
 		}
 	}
 	
+	auto start = TickDuration.currSystemTick();
+	
 	/* TODO: sort these if/elseif/else chains in order of likelihood, once all
 	 * cases have been added */
 	
@@ -612,6 +615,15 @@ LexContext lexSource(string source) {
 		
 		writef("line%4u  col %2u:  %s%s\n",
 			token.line, token.col, token.type, tag);
+	}
+	
+	auto finish = TickDuration.currSystemTick();
+	long duration = finish.msecs() - start.msecs();
+	if (duration >= 0) {
+		stderr.writef("[lex] took %d.%03d seconds\n",
+			duration / 1000, duration % 1000);
+	} else {
+		stderr.write("[lex|warn] duration is negative?!\n");
 	}
 	
 	return ctx;
