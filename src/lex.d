@@ -608,6 +608,7 @@ LexContext lexSource(string source) {
 					if (cur[0] != cur[1]) {
 						advance();
 						finishInteger(TokenType.LITERAL_ULONG);
+						goto done;
 					} else {
 						stderr.writef("lex|error|%d:%d] invalid integer " ~
 							"literal suffix\n", ctx.line, ctx.col);
@@ -637,6 +638,7 @@ LexContext lexSource(string source) {
 			
 		}
 		
+	done:
 		advance();
 	}
 	
