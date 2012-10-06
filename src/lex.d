@@ -457,7 +457,7 @@ LexContext lexSource(string source) {
 				startCol = ctx.col;
 				
 				if (cur[0] == '0') {
-					if (cur.length >= 2 && toLower(cur[1]) == 'x') {
+					if (cur.length >= 2 && cur[1].toLower() == 'x') {
 						advance();
 						ctx.state = LexState.LITERAL_INT_H;
 					} else {
