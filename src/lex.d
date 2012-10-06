@@ -221,22 +221,32 @@ LexContext lexSource(string source) {
 		}
 		
 		if (cur.length == 1 || !inPattern(cur[1], pattern)) {
-			int tagInt;
+			long literal;
 			
-			/* for now, we assume nothing has a suffix like L and can therefore
-			 * fit into an int (also, it lets us ignore suffixes when parsing
-			 * the contents of buffer) */
+			/* TODO: handle L/LL */
+			/* TODO: handle unsigned literals: U/u */
+			
+			/* condition under which literal is int: no L/LL suffix, and within
+			 * the 32-bit window: (0, 2^32-1) for unsigned, (-2^32, 2^32-1) for
+			 * signed; otherwise, default to long for literals */
 			
 			try {
-				tagInt = parse!int(buffer, radix);
+				literal = parse!long(buffer, radix);
 			} catch (ConvOverflowException e) {
 				stderr.writef("[lex:%u] overflow in integer literal\n",
 					ctx.line);
 				exit(1);
 			}
 			
-			ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
-				ctx.line, startCol, tagInt));
+			/* implicitly promote literals if they won't fit in an int */
+			if (/* no L && */literal >= int.min && literal <= int.max) {
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_INT,
+					ctx.line, startCol, cast(int)literal));
+			} else {
+				ctx.tokens.insertBack(Token(TokenType.LITERAL_LONG,
+					ctx.line, startCol, literal));
+			}
+			
 			
 			buffer.length = 0;
 			ctx.state = LexState.DEFAULT;
