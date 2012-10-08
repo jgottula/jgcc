@@ -162,7 +162,7 @@ LexContext lexSource(string source) {
 	char[] buffer = new char[0];
 	ulong startCol = 0;
 	
-	/*
+	/**
 	 * Adds a token to the list in ctx with the current line and column.
 	 */
 	void addToken(TokenType type) {
@@ -201,7 +201,7 @@ LexContext lexSource(string source) {
 		ctx.col = 0;
 	}
 	
-	/*
+	/**
 	 * Determines if the current integer literal has reached its end.
 	 */
 	bool integerDone() {
@@ -220,7 +220,7 @@ LexContext lexSource(string source) {
 		return (cur.length <= 1 || !cur[1].inPattern(pattern[ctx.state]));
 	}
 	
-	/*
+	/**
 	 * Adds a finished integer literal as a token.
 	 */
 	void finishInteger(TokenType type) {
