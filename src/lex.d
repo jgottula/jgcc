@@ -117,7 +117,6 @@ struct Token {
  */
 enum LexState : ubyte {
 	DEFAULT,
-	COMMENT_BLOCK, COMMENT_LINE,
 	IDENTIFIER,
 	LITERAL_STR, LITERAL_CHAR,
 	LITERAL_INT_B, LITERAL_INT_O, LITERAL_INT_D, LITERAL_INT_H,
@@ -417,13 +416,7 @@ LexContext lexSource(string source) {
 					addToken(TokenType.MULTIPLY);
 				}
 			} else if (cur[0] == '/') {
-				if (cur.length >= 2 && cur[1] == '/') {
-					advance();
-					ctx.state = LexState.COMMENT_LINE;
-				} else if (cur.length >= 2 && cur[1] == '*') {
-					advance();
-					ctx.state = LexState.COMMENT_BLOCK;
-				} else if (cur.length >= 2 && cur[1] == '=') {
+				if (cur.length >= 2 && cur[1] == '=') {
 					addToken(TokenType.ASSIGN_DIVIDE);
 					advance();
 				} else {
@@ -510,20 +503,6 @@ LexContext lexSource(string source) {
 					"'%c'\n", ctx.line, ctx.col, cur[0]);
 				stderr.write("TODO: make this error fatal\n");
 				//exit(1);
-			}
-		} else if (ctx.state == LexState.COMMENT_BLOCK) {
-			if (atNewLine()) {
-				handleNewLine();
-			} else if (cur[0] == '*') {
-				if (cur.length >= 2 && cur[1] == '/') {
-					advance();
-					ctx.state = LexState.DEFAULT;
-				}
-			}
-		} else if (ctx.state == LexState.COMMENT_LINE) {
-			if (atNewLine()) {
-				handleNewLine();
-				ctx.state = LexState.DEFAULT;
 			}
 		} else if (ctx.state == LexState.LITERAL_STR ||
 			ctx.state == LexState.LITERAL_CHAR) {
@@ -656,11 +635,7 @@ LexContext lexSource(string source) {
 	ctx.tokens.insertBack(Token(TokenType.EOF, ctx.line, 0));
 	
 	/* determine if the state in which we find ourselves after EOF is correct */
-	if (ctx.state == LexState.COMMENT_BLOCK) {
-		stderr.writef("[lex|error|%d:%d] encountered EOF while still in a " ~
-			"comment block\n", ctx.line, ctx.col);
-		exit(1);
-	} else if (ctx.state == LexState.LITERAL_STR) {
+	if (ctx.state == LexState.LITERAL_STR) {
 		stderr.writef("[lex|error|%d:%d] encountered EOF while still in a " ~
 			"string literal\n", ctx.line, ctx.col);
 		exit(1);
